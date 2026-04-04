@@ -23,7 +23,9 @@ export async function GET(request: Request) {
       .range(offset, offset + limit - 1);
 
     if (q) {
-      query = query.or(`title.ilike.%${q}%,description.ilike.%${q}%`);
+      query = query.or(
+        `title.ilike.%${q}%,description.ilike.%${q}%,extended_description.ilike.%${q}%`,
+      );
     }
 
     const { data, error } = await query;

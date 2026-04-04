@@ -14,7 +14,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "AI Engineer Directory",
-  description: "People, organizations, sessions, and YouTube recordings from the AI Engineer graph.",
+  description:
+    "Explore leading engineers and companies building cutting-edge AI — sessions and talks from the AI Engineer World’s Fair.",
 };
 
 export default function RootLayout({

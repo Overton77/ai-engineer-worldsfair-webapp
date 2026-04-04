@@ -1,5 +1,15 @@
 import Image from "next/image";
+import { Clapperboard, Landmark, Presentation, UserRound } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import type { Tables } from "@/types/database.types";
 
 type Person = Tables<"person"> & {
@@ -23,37 +33,43 @@ export function PersonCard({
   onSelect: () => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={`flex w-full gap-3 rounded-xl border p-3 text-left transition hover:bg-zinc-50 dark:hover:bg-zinc-900/80 ${
-        active
-          ? "border-amber-500 ring-2 ring-amber-500/30 dark:border-amber-400"
-          : "border-zinc-200 dark:border-zinc-800"
-      }`}
-    >
-      {person.sessionize_profile_picture_url ? (
-        // eslint-disable-next-line @next/next/no-img-element -- arbitrary external CDNs
-        <img
-          src={person.sessionize_profile_picture_url}
-          alt=""
-          className="h-14 w-14 shrink-0 rounded-full object-cover"
-          loading="lazy"
-        />
-      ) : (
-        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-zinc-200 text-sm font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-          {(person.first_name?.[0] ?? person.full_name?.[0] ?? "?").toUpperCase()}
-        </div>
+    <Card
+      size="sm"
+      className={cn(
+        "py-0 transition-shadow hover:ring-2 hover:ring-ring/40",
+        active && "ring-2 ring-primary",
       )}
-      <div className="min-w-0 flex-1">
-        <p className="truncate font-medium text-zinc-900 dark:text-zinc-50">
-          {person.full_name ?? person.person_id}
-        </p>
-        {person.role_title ? (
-          <p className="line-clamp-2 text-xs text-zinc-600 dark:text-zinc-400">{person.role_title}</p>
-        ) : null}
-      </div>
-    </button>
+    >
+      <button
+        type="button"
+        onClick={onSelect}
+        className="flex w-full flex-col text-left outline-none"
+      >
+        <CardHeader className="grid grid-cols-[auto_1fr] items-center gap-3 pb-2">
+          {person.sessionize_profile_picture_url ? (
+            // eslint-disable-next-line @next/next/no-img-element -- arbitrary external CDNs
+            <img
+              src={person.sessionize_profile_picture_url}
+              alt=""
+              className="h-12 w-12 shrink-0 rounded-full object-cover"
+              loading="lazy"
+            />
+          ) : (
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+              <UserRound className="size-5" aria-hidden />
+            </div>
+          )}
+          <div className="min-w-0 flex-1 space-y-0.5">
+            <CardTitle className="truncate text-sm leading-tight">
+              {person.full_name ?? person.person_id}
+            </CardTitle>
+            {person.role_title ? (
+              <p className="line-clamp-2 text-xs text-muted-foreground">{person.role_title}</p>
+            ) : null}
+          </div>
+        </CardHeader>
+      </button>
+    </Card>
   );
 }
 
@@ -67,23 +83,30 @@ export function OrganizationCard({
   onSelect: () => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={`w-full rounded-xl border p-3 text-left transition hover:bg-zinc-50 dark:hover:bg-zinc-900/80 ${
-        active
-          ? "border-amber-500 ring-2 ring-amber-500/30 dark:border-amber-400"
-          : "border-zinc-200 dark:border-zinc-800"
-      }`}
+    <Card
+      size="sm"
+      className={cn(
+        "py-0 transition-shadow hover:ring-2 hover:ring-ring/40",
+        active && "ring-2 ring-primary",
+      )}
     >
-      <p className="font-medium text-zinc-900 dark:text-zinc-50">{org.name ?? org.organization_id}</p>
-      {org.organization_type ? (
-        <p className="text-xs text-zinc-600 dark:text-zinc-400">{org.organization_type}</p>
-      ) : null}
-      {org.website_domain ? (
-        <p className="truncate text-xs text-amber-700 dark:text-amber-300">{org.website_domain}</p>
-      ) : null}
-    </button>
+      <button type="button" onClick={onSelect} className="flex w-full flex-col text-left outline-none">
+        <CardHeader className="pb-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Landmark className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+            <CardTitle className="text-sm">{org.name ?? org.organization_id}</CardTitle>
+            {org.organization_type ? (
+              <Badge variant="outline" className="text-[10px] font-normal">
+                {org.organization_type}
+              </Badge>
+            ) : null}
+          </div>
+          {org.website_domain ? (
+            <p className="truncate text-xs text-primary">{org.website_domain}</p>
+          ) : null}
+        </CardHeader>
+      </button>
+    </Card>
   );
 }
 
@@ -97,24 +120,27 @@ export function SessionCard({
   onSelect: () => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={`w-full rounded-xl border p-3 text-left transition hover:bg-zinc-50 dark:hover:bg-zinc-900/80 ${
-        active
-          ? "border-amber-500 ring-2 ring-amber-500/30 dark:border-amber-400"
-          : "border-zinc-200 dark:border-zinc-800"
-      }`}
+    <Card
+      size="sm"
+      className={cn(
+        "py-0 transition-shadow hover:ring-2 hover:ring-ring/40",
+        active && "ring-2 ring-primary",
+      )}
     >
-      <p className="line-clamp-2 font-medium text-zinc-900 dark:text-zinc-50">
-        {session.title ?? session.session_id}
-      </p>
-      {session.level ? (
-        <span className="mt-1 inline-block rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
-          {session.level}
-        </span>
-      ) : null}
-    </button>
+      <button type="button" onClick={onSelect} className="flex w-full flex-col text-left outline-none">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex gap-2 text-sm leading-snug">
+            <Presentation className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+            <span className="line-clamp-2">{session.title ?? session.session_id}</span>
+          </CardTitle>
+          {session.level ? (
+            <Badge variant="secondary" className="w-fit text-[10px]">
+              {session.level}
+            </Badge>
+          ) : null}
+        </CardHeader>
+      </button>
+    </Card>
   );
 }
 
@@ -128,42 +154,45 @@ export function VideoCard({
   onSelect: () => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={`overflow-hidden rounded-xl border text-left transition hover:bg-zinc-50 dark:hover:bg-zinc-900/50 ${
-        active
-          ? "border-amber-500 ring-2 ring-amber-500/30 dark:border-amber-400"
-          : "border-zinc-200 dark:border-zinc-800"
-      }`}
+    <Card
+      size="sm"
+      className={cn(
+        "overflow-hidden py-0 transition-shadow hover:ring-2 hover:ring-ring/40",
+        active && "ring-2 ring-primary",
+      )}
     >
-      <div className="relative aspect-video w-full bg-zinc-900">
-        {video.thumbnail_url ? (
-          <Image
-            src={video.thumbnail_url}
-            alt=""
-            fill
-            className="object-cover"
-            sizes="(max-width: 768px) 100vw, 33vw"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center text-xs text-zinc-400">No thumbnail</div>
-        )}
-        <div className="absolute inset-0 bg-linear-to-t from-black/70 via-transparent to-transparent" />
-        <p className="absolute bottom-2 left-2 right-2 line-clamp-2 text-sm font-medium text-white drop-shadow">
-          {video.title ?? video.video_id}
-        </p>
-      </div>
-      <div className="flex items-center justify-between gap-2 px-3 py-2">
-        <span className="truncate text-xs text-zinc-600 dark:text-zinc-400">
-          {video.youtube_channel?.channel_title ?? "YouTube"}
-        </span>
-        {video.published_at ? (
-          <span className="shrink-0 text-[10px] text-zinc-500">
-            {new Date(video.published_at).toLocaleDateString()}
+      <button type="button" onClick={onSelect} className="flex w-full flex-col text-left outline-none">
+        <div className="relative aspect-video w-full bg-muted">
+          {video.thumbnail_url ? (
+            <Image
+              src={video.thumbnail_url}
+              alt=""
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, 33vw"
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
+              No thumbnail
+            </div>
+          )}
+          <div className="absolute inset-0 bg-linear-to-t from-black/75 via-transparent to-transparent" />
+          <p className="absolute bottom-2 left-2 right-2 line-clamp-2 text-left text-xs font-medium text-white drop-shadow">
+            {video.title ?? video.video_id}
+          </p>
+        </div>
+        <CardFooter className="flex flex-row items-center justify-between gap-2 border-t py-2">
+          <span className="flex min-w-0 items-center gap-1.5 truncate text-[11px] text-muted-foreground">
+            <Clapperboard className="size-3 shrink-0 text-muted-foreground" aria-hidden />
+            {video.youtube_channel?.channel_title ?? "YouTube"}
           </span>
-        ) : null}
-      </div>
-    </button>
+          {video.published_at ? (
+            <span className="shrink-0 text-[10px] text-muted-foreground">
+              {new Date(video.published_at).toLocaleDateString()}
+            </span>
+          ) : null}
+        </CardFooter>
+      </button>
+    </Card>
   );
 }

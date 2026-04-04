@@ -7,12 +7,15 @@ export type Json =
   | Json[]
 
 export type Database = {
-  __InternalSupabase: { PostgrestVersion: "14.5" }
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
+  }
   public: {
     Tables: {
       organization: {
         Row: {
           flagship_products: string | null
+          fts: unknown
           name: string | null
           organization_id: string
           organization_type: string | null
@@ -22,6 +25,7 @@ export type Database = {
         }
         Insert: {
           flagship_products?: string | null
+          fts?: unknown
           name?: string | null
           organization_id: string
           organization_type?: string | null
@@ -31,6 +35,7 @@ export type Database = {
         }
         Update: {
           flagship_products?: string | null
+          fts?: unknown
           name?: string | null
           organization_id?: string
           organization_type?: string | null
@@ -85,6 +90,7 @@ export type Database = {
           bio: string | null
           expertise_or_focus_area: string | null
           first_name: string | null
+          fts: unknown
           full_name: string | null
           last_name: string | null
           linkedin_url: string | null
@@ -98,6 +104,7 @@ export type Database = {
           bio?: string | null
           expertise_or_focus_area?: string | null
           first_name?: string | null
+          fts?: unknown
           full_name?: string | null
           last_name?: string | null
           linkedin_url?: string | null
@@ -111,6 +118,7 @@ export type Database = {
           bio?: string | null
           expertise_or_focus_area?: string | null
           first_name?: string | null
+          fts?: unknown
           full_name?: string | null
           last_name?: string | null
           linkedin_url?: string | null
@@ -347,6 +355,7 @@ export type Database = {
           description: string | null
           duration: string | null
           duration_seconds: number | null
+          fts: unknown
           like_count: number | null
           published_at: string | null
           thumbnail_url: string | null
@@ -361,6 +370,7 @@ export type Database = {
           description?: string | null
           duration?: string | null
           duration_seconds?: number | null
+          fts?: unknown
           like_count?: number | null
           published_at?: string | null
           thumbnail_url?: string | null
@@ -375,6 +385,7 @@ export type Database = {
           description?: string | null
           duration?: string | null
           duration_seconds?: number | null
+          fts?: unknown
           like_count?: number | null
           published_at?: string | null
           thumbnail_url?: string | null
@@ -394,10 +405,18 @@ export type Database = {
         ]
       }
     }
-    Views: { [_ in never]: never }
-    Functions: { [_ in never]: never }
-    Enums: { [_ in never]: never }
-    CompositeTypes: { [_ in never]: never }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
 }
 

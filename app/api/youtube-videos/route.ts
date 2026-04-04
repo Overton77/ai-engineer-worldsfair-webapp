@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { FTS_OPTIONS } from "@/lib/api/apply-text-search";
 import { parseListParams } from "@/lib/api/list-params";
 import { createServiceClient } from "@/lib/supabase/admin";
 
@@ -24,7 +25,7 @@ export async function GET(request: Request) {
       .range(offset, offset + limit - 1);
 
     if (q) {
-      query = query.or(`title.ilike.%${q}%,description.ilike.%${q}%`);
+      query = query.textSearch("fts", q, FTS_OPTIONS);
     }
 
     const { data, error } = await query;
