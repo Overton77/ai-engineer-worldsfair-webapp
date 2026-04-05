@@ -45,12 +45,40 @@ export function RelationshipEdgeCard({
   secondary,
   meta,
   className,
+  onNavigate,
 }: {
   primary: React.ReactNode
   secondary?: React.ReactNode
   meta?: React.ReactNode
   className?: string
+  /** When set, the card is a button and opens the linked entity in the directory. */
+  onNavigate?: () => void
 }) {
+  const body = (
+    <>
+      <div className="font-medium text-foreground">{primary}</div>
+      {secondary ? (
+        <div className="text-xs text-muted-foreground">{secondary}</div>
+      ) : null}
+      {meta ? <div className="text-[11px] text-muted-foreground">{meta}</div> : null}
+    </>
+  )
+
+  if (onNavigate) {
+    return (
+      <button
+        type="button"
+        onClick={onNavigate}
+        className={cn(
+          "flex flex-col gap-0.5 rounded-lg border border-border/80 bg-card px-3 py-2 text-left text-sm transition-colors hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          className,
+        )}
+      >
+        {body}
+      </button>
+    )
+  }
+
   return (
     <div
       className={cn(
@@ -58,11 +86,7 @@ export function RelationshipEdgeCard({
         className,
       )}
     >
-      <div className="font-medium text-foreground">{primary}</div>
-      {secondary ? (
-        <div className="text-xs text-muted-foreground">{secondary}</div>
-      ) : null}
-      {meta ? <div className="text-[11px] text-muted-foreground">{meta}</div> : null}
+      {body}
     </div>
   )
 }

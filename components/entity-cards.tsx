@@ -148,10 +148,13 @@ export function VideoCard({
   video,
   active,
   onSelect,
+  compact = false,
 }: {
   video: YoutubeVideo;
   active: boolean;
   onSelect: () => void;
+  /** Smaller typography and footer — for dense grids under the main player. */
+  compact?: boolean;
 }) {
   return (
     <Card
@@ -169,7 +172,7 @@ export function VideoCard({
               alt=""
               fill
               className="object-cover"
-              sizes="(max-width: 768px) 100vw, 33vw"
+              sizes={compact ? "(max-width: 768px) 50vw, 180px" : "(max-width: 768px) 100vw, 33vw"}
             />
           ) : (
             <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
@@ -177,17 +180,34 @@ export function VideoCard({
             </div>
           )}
           <div className="absolute inset-0 bg-linear-to-t from-black/75 via-transparent to-transparent" />
-          <p className="absolute bottom-2 left-2 right-2 line-clamp-2 text-left text-xs font-medium text-white drop-shadow">
+          <p
+            className={cn(
+              "absolute left-2 right-2 text-left font-medium text-white drop-shadow",
+              compact
+                ? "bottom-1.5 line-clamp-1 text-[10px] leading-tight"
+                : "bottom-2 line-clamp-2 text-xs",
+            )}
+          >
             {video.title ?? video.video_id}
           </p>
         </div>
-        <CardFooter className="flex flex-row items-center justify-between gap-2 border-t py-2">
-          <span className="flex min-w-0 items-center gap-1.5 truncate text-[11px] text-muted-foreground">
-            <Clapperboard className="size-3 shrink-0 text-muted-foreground" aria-hidden />
+        <CardFooter
+          className={cn(
+            "flex flex-row items-center justify-between gap-2 border-t",
+            compact ? "py-1.5" : "py-2",
+          )}
+        >
+          <span
+            className={cn(
+              "flex min-w-0 items-center gap-1.5 truncate text-muted-foreground",
+              compact ? "text-[10px]" : "text-[11px]",
+            )}
+          >
+            <Clapperboard className={cn("shrink-0 text-muted-foreground", compact ? "size-2.5" : "size-3")} aria-hidden />
             {video.youtube_channel?.channel_title ?? "YouTube"}
           </span>
           {video.published_at ? (
-            <span className="shrink-0 text-[10px] text-muted-foreground">
+            <span className={cn("shrink-0 text-muted-foreground", compact ? "text-[9px]" : "text-[10px]")}>
               {new Date(video.published_at).toLocaleDateString()}
             </span>
           ) : null}

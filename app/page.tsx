@@ -1,17 +1,23 @@
-import { DirectoryExplorer } from "@/components/directory-explorer";
+import { WelcomeGate } from "@/components/landing/welcome-gate";
 
-export default function Home() {
+type Props = {
+  searchParams: Promise<{ error?: string; message?: string; redirect?: string }>;
+};
+
+function safeRedirectParam(value: string | undefined): string {
+  if (value && value.startsWith("/") && !value.startsWith("//")) return value;
+  return "/directory";
+}
+
+export default async function HomePage({ searchParams }: Props) {
+  const params = await searchParams;
+  const redirectPath = safeRedirectParam(params.redirect);
+
   return (
-    <main className="flex min-h-dvh flex-col">
-      <div
-        className="border-b border-border bg-muted/50 px-4 py-2.5 text-center text-xs text-muted-foreground sm:text-sm"
-        role="status"
-      >
-        Full AI Engineer course app coming soon — editor support and an integrated AI agent.
-      </div>
-      <div className="min-h-0 flex-1">
-        <DirectoryExplorer />
-      </div>
-    </main>
+    <WelcomeGate
+      initialError={params.error ?? null}
+      initialMessage={params.message ?? null}
+      redirectPath={redirectPath}
+    />
   );
 }

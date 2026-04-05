@@ -7,6 +7,8 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
@@ -14,6 +16,7 @@ export type Database = {
     Tables: {
       organization: {
         Row: {
+          embedding: string | null
           flagship_products: string | null
           fts: unknown
           name: string | null
@@ -21,9 +24,11 @@ export type Database = {
           organization_type: string | null
           overview: string | null
           primary_ai_focus: string | null
+          search_text: string | null
           website_domain: string | null
         }
         Insert: {
+          embedding?: string | null
           flagship_products?: string | null
           fts?: unknown
           name?: string | null
@@ -31,9 +36,11 @@ export type Database = {
           organization_type?: string | null
           overview?: string | null
           primary_ai_focus?: string | null
+          search_text?: string | null
           website_domain?: string | null
         }
         Update: {
+          embedding?: string | null
           flagship_products?: string | null
           fts?: unknown
           name?: string | null
@@ -41,6 +48,7 @@ export type Database = {
           organization_type?: string | null
           overview?: string | null
           primary_ai_focus?: string | null
+          search_text?: string | null
           website_domain?: string | null
         }
         Relationships: []
@@ -88,6 +96,7 @@ export type Database = {
         Row: {
           ai_engineer_url: string | null
           bio: string | null
+          embedding: string | null
           expertise_or_focus_area: string | null
           first_name: string | null
           fts: unknown
@@ -96,12 +105,14 @@ export type Database = {
           linkedin_url: string | null
           person_id: string
           role_title: string | null
+          search_text: string | null
           sessionize_profile_picture_url: string | null
           tag_line: string | null
         }
         Insert: {
           ai_engineer_url?: string | null
           bio?: string | null
+          embedding?: string | null
           expertise_or_focus_area?: string | null
           first_name?: string | null
           fts?: unknown
@@ -110,12 +121,14 @@ export type Database = {
           linkedin_url?: string | null
           person_id: string
           role_title?: string | null
+          search_text?: string | null
           sessionize_profile_picture_url?: string | null
           tag_line?: string | null
         }
         Update: {
           ai_engineer_url?: string | null
           bio?: string | null
+          embedding?: string | null
           expertise_or_focus_area?: string | null
           first_name?: string | null
           fts?: unknown
@@ -124,6 +137,7 @@ export type Database = {
           linkedin_url?: string | null
           person_id?: string
           role_title?: string | null
+          search_text?: string | null
           sessionize_profile_picture_url?: string | null
           tag_line?: string | null
         }
@@ -276,22 +290,28 @@ export type Database = {
       session: {
         Row: {
           description: string | null
+          embedding: string | null
           extended_description: string | null
           level: string | null
+          search_text: string | null
           session_id: string
           title: string | null
         }
         Insert: {
           description?: string | null
+          embedding?: string | null
           extended_description?: string | null
           level?: string | null
+          search_text?: string | null
           session_id: string
           title?: string | null
         }
         Update: {
           description?: string | null
+          embedding?: string | null
           extended_description?: string | null
           level?: string | null
+          search_text?: string | null
           session_id?: string
           title?: string | null
         }
@@ -355,9 +375,11 @@ export type Database = {
           description: string | null
           duration: string | null
           duration_seconds: number | null
+          embedding: string | null
           fts: unknown
           like_count: number | null
           published_at: string | null
+          search_text: string | null
           thumbnail_url: string | null
           title: string | null
           url: string | null
@@ -370,9 +392,11 @@ export type Database = {
           description?: string | null
           duration?: string | null
           duration_seconds?: number | null
+          embedding?: string | null
           fts?: unknown
           like_count?: number | null
           published_at?: string | null
+          search_text?: string | null
           thumbnail_url?: string | null
           title?: string | null
           url?: string | null
@@ -385,9 +409,11 @@ export type Database = {
           description?: string | null
           duration?: string | null
           duration_seconds?: number | null
+          embedding?: string | null
           fts?: unknown
           like_count?: number | null
           published_at?: string | null
+          search_text?: string | null
           thumbnail_url?: string | null
           title?: string | null
           url?: string | null
@@ -443,8 +469,10 @@ export type Tables<
     }
     ? R
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] & DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
         Row: infer R
       }
       ? R

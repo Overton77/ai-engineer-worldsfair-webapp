@@ -13,6 +13,17 @@ export function youtubeEmbedSrc(videoId: string): string {
   return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?${q}`;
 }
 
+/** Embed URL for IFrame API (seek, events). Requires matching `origin` at runtime. */
+export function youtubeIframeApiEmbedSrc(videoId: string, origin: string): string {
+  const q = new URLSearchParams({
+    rel: "0",
+    modestbranding: "1",
+    enablejsapi: "1",
+  });
+  if (origin) q.set("origin", origin);
+  return `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?${q}`;
+}
+
 export function extractYoutubeVideoIdFromUrl(
   url: string | null | undefined,
 ): string | null {

@@ -7,7 +7,9 @@ import { createServiceClient } from "@/lib/supabase/admin";
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const { limit, offset, expand } = parseListParams(searchParams);
+    const { limit, offset, expand } = parseListParams(searchParams, {
+      maxLimit: 5000,
+    });
     const q = searchParams.get("q")?.trim();
     const supabase = createServiceClient();
 

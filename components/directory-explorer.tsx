@@ -1,9 +1,14 @@
 "use client";
 
 import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Clapperboard,
+  Filter,
   Landmark,
   LayoutGrid,
+  PanelRight,
   Presentation,
   RefreshCw,
   Search,
@@ -11,6 +16,7 @@ import {
   UserRound,
   X,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
@@ -20,13 +26,40 @@ import {
   VideoCard,
 } from "@/components/entity-cards";
 import { RelationshipEdgeCard, RelationshipSection } from "@/components/relationship-ui";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { YoutubeEmbed } from "@/components/youtube-embed";
+const YoutubePlayerWithChapters = dynamic(
+  () =>
+    import("@/components/youtube-player-with-chapters").then((mod) => ({
+      default: mod.YoutubePlayerWithChapters,
+    })),
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        className="aspect-video w-full max-w-5xl animate-pulse rounded-xl border border-border bg-muted mx-auto"
+        aria-hidden
+      />
+    ),
+  },
+);
+import {
+  appendYoutubeVideoFilterParams,
+  DEFAULT_YOUTUBE_VIDEO_FILTERS,
+  formatFilterDuration,
+  YOUTUBE_VIDEO_FILTER_BOUNDS,
+  type YoutubeVideoFilterState,
+} from "@/lib/api/youtube-video-filters";
 import { cn } from "@/lib/utils";
 import type { Tables } from "@/types/database.types";
 
@@ -171,6 +204,10 @@ function normalizeVideoSessionLink(
   return Array.isArray(raw) ? raw : [raw];
 }
 
+const VIDEO_PAGE_SIZE = 12;
+/** Fetch full catalog for the directory selectors (API caps at 5000 per list). */
+const DIRECTORY_FETCH_LIMIT = "5000";
+
 export function DirectoryExplorer() {
   const [tab, setTab] = useState<Tab>("videos");
   const [loading, setLoading] = useState(false);
@@ -189,6 +226,12 @@ export function DirectoryExplorer() {
   const [selVideo, setSelVideo] = useState<VideoRow | null>(null);
 
   const [playerVideo, setPlayerVideo] = useState<VideoRow | Tables<"youtube_video"> | null>(null);
+  const [videoListPage, setVideoListPage] = useState(0);
+  const [videoFilters, setVideoFilters] = useState<YoutubeVideoFilterState>(DEFAULT_YOUTUBE_VIDEO_FILTERS);
+  const [debouncedVideoFilters, setDebouncedVideoFilters] =
+    useState<YoutubeVideoFilterState>(DEFAULT_YOUTUBE_VIDEO_FILTERS);
+  const [durationFilterOpen, setDurationFilterOpen] = useState(true);
+  const [overviewOpen, setOverviewOpen] = useState(true);
   const [searchPreview, setSearchPreview] = useState<SearchPreview | null>(null);
   const [searchPanelDismissed, setSearchPanelDismissed] = useState(false);
   const searchAreaRef = useRef<HTMLDivElement>(null);
@@ -198,21 +241,22 @@ export function DirectoryExplorer() {
     return () => clearTimeout(t);
   }, [searchInput]);
 
-  const load = useCallback(async (q: string) => {
+  const load = useCallback(async (q: string, vf: YoutubeVideoFilterState) => {
     setError(null);
     setLoading(true);
     try {
       const expand = "1";
-      const limit = "80";
-      const base: Record<string, string> = { expand, limit };
-      if (q) base.q = q;
+      const listQs = new URLSearchParams({ expand, limit: DIRECTORY_FETCH_LIMIT });
+      if (q) listQs.set("q", q);
+      const videoQs = new URLSearchParams({ expand, limit: DIRECTORY_FETCH_LIMIT });
+      if (q) videoQs.set("q", q);
+      appendYoutubeVideoFilterParams(videoQs, vf);
 
-      const qs = new URLSearchParams(base);
       const [pr, or, se, vi] = await Promise.all([
-        fetch(`/api/persons?${qs}`),
-        fetch(`/api/organizations?${qs}`),
-        fetch(`/api/sessions?${qs}`),
-        fetch(`/api/youtube-videos?${qs}`),
+        fetch(`/api/persons?${listQs}`),
+        fetch(`/api/organizations?${listQs}`),
+        fetch(`/api/sessions?${listQs}`),
+        fetch(`/api/youtube-videos?${videoQs}`),
       ]);
 
       for (const r of [pr, or, se, vi]) {
@@ -252,9 +296,112 @@ export function DirectoryExplorer() {
     }
   }, []);
 
+  const navigateToPerson = useCallback(
+    async (personId: string) => {
+      setTab("persons");
+      setPlayerVideo(null);
+      const fromList = persons.find((x) => x.person_id === personId);
+      if (fromList) {
+        setSelPerson(fromList);
+        return;
+      }
+      try {
+        const r = await fetch(`/api/persons/${encodeURIComponent(personId)}?expand=1`);
+        if (!r.ok) return;
+        const j = (await r.json()) as { data: PersonRow };
+        if (!j.data) return;
+        setPersons((prev) => mergeById(prev, j.data, (p) => p.person_id));
+        setSelPerson(j.data);
+      } catch {
+        /* ignore */
+      }
+    },
+    [persons],
+  );
+
+  const navigateToOrg = useCallback(
+    async (organizationId: string) => {
+      setTab("organizations");
+      setPlayerVideo(null);
+      const fromList = orgs.find((x) => x.organization_id === organizationId);
+      if (fromList) {
+        setSelOrg(fromList);
+        return;
+      }
+      try {
+        const r = await fetch(`/api/organizations/${encodeURIComponent(organizationId)}?expand=1`);
+        if (!r.ok) return;
+        const j = (await r.json()) as { data: OrgRow };
+        if (!j.data) return;
+        setOrgs((prev) => mergeById(prev, j.data, (o) => o.organization_id));
+        setSelOrg(j.data);
+      } catch {
+        /* ignore */
+      }
+    },
+    [orgs],
+  );
+
+  const navigateToSession = useCallback(
+    async (sessionId: string) => {
+      setTab("sessions");
+      const fromList = sessions.find((x) => x.session_id === sessionId);
+      if (fromList) {
+        setSelSession(fromList);
+        const links = normalizeSessionVideoLink(fromList.session_recorded_as_video);
+        const v = links[0]?.youtube_video;
+        setPlayerVideo(v ? { ...v, youtube_channel: null } : null);
+        return;
+      }
+      try {
+        const r = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}?expand=1`);
+        if (!r.ok) return;
+        const j = (await r.json()) as { data: SessionRow };
+        if (!j.data) return;
+        setSessions((prev) => mergeById(prev, j.data, (s) => s.session_id));
+        setSelSession(j.data);
+        const links = normalizeSessionVideoLink(j.data.session_recorded_as_video);
+        const v = links[0]?.youtube_video;
+        setPlayerVideo(v ? { ...v, youtube_channel: null } : null);
+      } catch {
+        /* ignore */
+      }
+    },
+    [sessions],
+  );
+
+  const navigateToVideo = useCallback(
+    async (videoId: string) => {
+      setTab("videos");
+      const fromList = videos.find((x) => x.video_id === videoId);
+      if (fromList) {
+        setSelVideo(fromList);
+        setPlayerVideo(fromList);
+        return;
+      }
+      try {
+        const r = await fetch(`/api/youtube-videos/${encodeURIComponent(videoId)}?expand=1`);
+        if (!r.ok) return;
+        const j = (await r.json()) as { data: VideoRow };
+        if (!j.data) return;
+        setVideos((prev) => mergeById(prev, j.data, (v) => v.video_id));
+        setSelVideo(j.data);
+        setPlayerVideo(j.data);
+      } catch {
+        /* ignore */
+      }
+    },
+    [videos],
+  );
+
   useEffect(() => {
-    void load(debouncedQ);
-  }, [load, debouncedQ]);
+    const t = setTimeout(() => setDebouncedVideoFilters(videoFilters), 360);
+    return () => clearTimeout(t);
+  }, [videoFilters]);
+
+  useEffect(() => {
+    void load(debouncedQ, debouncedVideoFilters);
+  }, [load, debouncedQ, debouncedVideoFilters]);
 
   useEffect(() => {
     if (tab === "videos" && selVideo) {
@@ -296,6 +443,26 @@ export function DirectoryExplorer() {
     document.addEventListener("pointerdown", handlePointerDown);
     return () => document.removeEventListener("pointerdown", handlePointerDown);
   }, []);
+
+  useEffect(() => {
+    setVideoListPage(0);
+  }, [debouncedQ, debouncedVideoFilters]);
+
+  useEffect(() => {
+    if (tab !== "videos" || !selVideo) return;
+    const idx = videos.findIndex((v) => v.video_id === selVideo.video_id);
+    if (idx < 0) return;
+    setVideoListPage(Math.floor(idx / VIDEO_PAGE_SIZE));
+  }, [tab, selVideo, videos]);
+
+  const videoSlice = useMemo(() => {
+    const start = videoListPage * VIDEO_PAGE_SIZE;
+    return videos.slice(start, start + VIDEO_PAGE_SIZE);
+  }, [videos, videoListPage]);
+
+  const videoPageCount = Math.max(1, Math.ceil(videos.length / VIDEO_PAGE_SIZE) || 1);
+  const hasPrevVideoPage = videoListPage > 0;
+  const hasNextVideoPage = (videoListPage + 1) * VIDEO_PAGE_SIZE < videos.length;
 
   const navItems = useMemo(
     () => (["videos", "persons", "organizations", "sessions"] as const).map((id) => ({ id, label: tabLabel(id), Icon: tabIcon(id) })),
@@ -489,7 +656,7 @@ export function DirectoryExplorer() {
             size="sm"
             className="w-full"
             disabled={loading}
-            onClick={() => void load(debouncedQ)}
+            onClick={() => void load(debouncedQ, videoFilters)}
           >
             <RefreshCw className={cn("mr-2 size-3.5", loading && "animate-spin")} />
             {loading ? "Refreshing…" : "Refresh data"}
@@ -499,20 +666,57 @@ export function DirectoryExplorer() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="border-b border-border px-6 py-4">
-          <h1 className="text-balance text-xl font-semibold tracking-tight md:text-2xl">{detailTitle}</h1>
-          <div className="mt-2 max-w-2xl space-y-2 text-sm text-muted-foreground">
-            <p>
-              Explore top engineers and companies implementing cutting-edge AI solutions — built from real conference
-              data and recordings.
-            </p>
-            <ol className="list-inside list-decimal space-y-1 text-foreground/90">
-              <li>Explore their presentations from the AI Engineer World&apos;s Fair.</li>
-            </ol>
-            <p>
-              <span className="font-medium text-foreground">Tip:</span> use the sidebar search to jump to people,
-              organizations, or videos.
-            </p>
-          </div>
+          {tab === "videos" ? (
+            <>
+              <h1 className="line-clamp-2 text-pretty text-xl font-semibold tracking-tight md:text-2xl">
+                {playerVideo?.title ?? selVideo?.title ?? selVideo?.video_id ?? "Conference talks on YouTube"}
+              </h1>
+              {playerVideo ? (
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                  <span className="inline-flex min-w-0 max-w-full items-center gap-1.5">
+                    <Clapperboard className="size-3.5 shrink-0 opacity-80" aria-hidden />
+                    <span className="truncate">
+                      {"youtube_channel" in playerVideo && playerVideo.youtube_channel?.channel_title
+                        ? playerVideo.youtube_channel.channel_title
+                        : "YouTube"}
+                    </span>
+                  </span>
+                  {playerVideo.published_at ? (
+                    <span className="shrink-0">
+                      {new Date(playerVideo.published_at).toLocaleDateString(undefined, { dateStyle: "medium" })}
+                    </span>
+                  ) : null}
+                  {playerVideo.view_count != null ? (
+                    <span className="shrink-0 tabular-nums">
+                      {Number(playerVideo.view_count).toLocaleString()} views
+                    </span>
+                  ) : null}
+                </div>
+              ) : (
+                <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+                  Pick a talk under the player. Timestamps in the description show as a chapter bar on the player;
+                  hover a segment for the title and click to jump.
+                </p>
+              )}
+            </>
+          ) : (
+            <>
+              <h1 className="text-balance text-xl font-semibold tracking-tight md:text-2xl">{detailTitle}</h1>
+              <div className="mt-2 max-w-2xl space-y-2 text-sm text-muted-foreground">
+                <p>
+                  Explore top engineers and companies implementing cutting-edge AI solutions — built from real conference
+                  data and recordings.
+                </p>
+                <ol className="list-inside list-decimal space-y-1 text-foreground/90">
+                  <li>Explore their presentations from the AI Engineer World&apos;s Fair.</li>
+                </ol>
+                <p>
+                  <span className="font-medium text-foreground">Tip:</span> use the sidebar search to jump to people,
+                  organizations, or videos.
+                </p>
+              </div>
+            </>
+          )}
         </header>
 
         {error ? (
@@ -524,93 +728,257 @@ export function DirectoryExplorer() {
           </div>
         ) : null}
 
-        <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(280px,380px)_1fr]">
-          <ScrollArea className="h-[calc(100dvh-8.5rem)] border-b border-border lg:h-[calc(100dvh-7rem)] lg:border-r lg:border-b-0">
-            <div className="space-y-2 p-4 pr-3">
-              {tab === "persons" &&
-                persons.map((p) => (
-                  <PersonCard
-                    key={p.person_id}
-                    person={p}
-                    active={selPerson?.person_id === p.person_id}
-                    onSelect={() => {
-                      setSelPerson(p);
-                      setPlayerVideo(null);
-                    }}
+        {tab === "videos" ? (
+          <div
+            className="min-h-0 flex-1 overflow-y-auto px-6 py-6"
+            aria-live="polite"
+          >
+            <div
+              className={cn(
+                "mx-auto flex w-full flex-col gap-8 transition-[max-width] duration-200",
+                overviewOpen ? "max-w-7xl" : "max-w-5xl",
+              )}
+            >
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+                <VideoDurationFilterPanel
+                  open={durationFilterOpen}
+                  onOpenChange={setDurationFilterOpen}
+                  value={videoFilters}
+                  onChange={setVideoFilters}
+                  onReset={() => setVideoFilters(DEFAULT_YOUTUBE_VIDEO_FILTERS)}
+                />
+
+                <div className="flex min-w-0 flex-1 flex-col gap-3">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-stretch">
+                    <div className="relative min-w-0 flex-1 space-y-2">
+                      {!overviewOpen ? (
+                        <div className="flex justify-end lg:absolute lg:right-0 lg:top-0 lg:z-10">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            className="gap-1.5 shadow-sm"
+                            onClick={() => setOverviewOpen(true)}
+                          >
+                            <PanelRight className="size-3.5" aria-hidden />
+                            Overview
+                          </Button>
+                        </div>
+                      ) : null}
+                      {playerVideo ? (
+                        <YoutubePlayerWithChapters
+                          videoId={playerVideo.video_id}
+                          url={playerVideo.url}
+                          title={playerVideo.title}
+                          description={playerVideo.description}
+                          durationSeconds={playerVideo.duration_seconds}
+                          duration={playerVideo.duration}
+                        />
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          Choose a talk from the list below (or from search) to play it here.
+                        </p>
+                      )}
+                    </div>
+                    {overviewOpen ? (
+                      <aside
+                        className="flex w-full shrink-0 flex-col rounded-xl border border-border bg-card/40 p-3 shadow-sm lg:max-w-[22rem] lg:border-l lg:bg-transparent lg:p-0 lg:pl-4 lg:shadow-none xl:max-w-sm"
+                        aria-label="Video overview"
+                      >
+                        <div className="mb-2 flex shrink-0 items-center justify-between gap-2 border-b border-border pb-2 lg:pt-0">
+                          <h2 className="text-sm font-semibold tracking-tight text-foreground">Overview</h2>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-xs"
+                            className="size-8 shrink-0 text-muted-foreground"
+                            aria-label="Close overview panel"
+                            onClick={() => setOverviewOpen(false)}
+                          >
+                            <X className="size-4" />
+                          </Button>
+                        </div>
+                        <ScrollArea className="h-[min(32rem,55dvh)] w-full lg:h-[min(36rem,72dvh)]">
+                          <div className="pr-3 pb-2">
+                            {selVideo || playerVideo ? (
+                              <VideoOverviewContent video={(selVideo ?? playerVideo)!} />
+                            ) : (
+                              <p className="text-sm text-muted-foreground">
+                                Select a talk to read its description and stats.
+                              </p>
+                            )}
+                          </div>
+                        </ScrollArea>
+                      </aside>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
+                  <h2 className="text-sm font-semibold tracking-tight text-foreground">All talks</h2>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 gap-1 px-2"
+                      disabled={!hasPrevVideoPage}
+                      aria-label="Previous page of videos"
+                      onClick={() => setVideoListPage((p) => Math.max(0, p - 1))}
+                    >
+                      <ChevronLeft className="size-4" />
+                      Prev
+                    </Button>
+                    <span className="min-w-32 text-center text-xs text-muted-foreground tabular-nums">
+                      {videos.length ? (
+                        <>
+                          {videoListPage + 1} / {videoPageCount}
+                        </>
+                      ) : (
+                        "—"
+                      )}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 gap-1 px-2"
+                      disabled={!hasNextVideoPage}
+                      aria-label="Next page of videos"
+                      onClick={() => setVideoListPage((p) => p + 1)}
+                    >
+                      Next
+                      <ChevronRight className="size-4" />
+                    </Button>
+                  </div>
+                </div>
+                {videoSlice.length ? (
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                    {videoSlice.map((v) => (
+                      <VideoCard
+                        key={v.video_id}
+                        video={v}
+                        compact
+                        active={selVideo?.video_id === v.video_id}
+                        onSelect={() => {
+                          setSelVideo(v);
+                          setPlayerVideo(v);
+                        }}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    No videos match the current search or numeric filters.
+                  </p>
+                )}
+                {Number(DIRECTORY_FETCH_LIMIT) <= videos.length ? (
+                  <p className="text-[11px] text-muted-foreground">
+                    Showing up to {DIRECTORY_FETCH_LIMIT} results. Refine search or duration to narrow the list.
+                  </p>
+                ) : null}
+              </div>
+
+              {selVideo ? (
+                <div className="border-t border-border pt-6">
+                  <VideoRelationshipsDetail
+                    video={selVideo}
+                    onOpenPerson={navigateToPerson}
+                    onOpenSession={navigateToSession}
                   />
-                ))}
-              {tab === "organizations" &&
-                orgs.map((o) => (
-                  <OrganizationCard
-                    key={o.organization_id}
-                    org={o}
-                    active={selOrg?.organization_id === o.organization_id}
-                    onSelect={() => {
-                      setSelOrg(o);
-                      setPlayerVideo(null);
-                    }}
-                  />
-                ))}
-              {tab === "sessions" &&
-                sessions.map((s) => (
-                  <SessionCard
-                    key={s.session_id}
-                    session={s}
-                    active={selSession?.session_id === s.session_id}
-                    onSelect={() => {
-                      setSelSession(s);
-                      const links = normalizeSessionVideoLink(s.session_recorded_as_video);
-                      const v = links[0]?.youtube_video;
-                      setPlayerVideo(v ? { ...v, youtube_channel: null } : null);
-                    }}
-                  />
-                ))}
-              {tab === "videos" && (
-                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
-                  {videos.map((v) => (
-                    <VideoCard
-                      key={v.video_id}
-                      video={v}
-                      active={selVideo?.video_id === v.video_id}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        ) : (
+          <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(280px,380px)_1fr]">
+            <ScrollArea className="h-[calc(100dvh-8.5rem)] border-b border-border lg:h-[calc(100dvh-7rem)] lg:border-r lg:border-b-0">
+              <div className="space-y-2 p-4 pr-3">
+                {tab === "persons" &&
+                  persons.map((p) => (
+                    <PersonCard
+                      key={p.person_id}
+                      person={p}
+                      active={selPerson?.person_id === p.person_id}
                       onSelect={() => {
-                        setSelVideo(v);
-                        setPlayerVideo(v);
+                        setSelPerson(p);
+                        setPlayerVideo(null);
                       }}
                     />
                   ))}
-                </div>
+                {tab === "organizations" &&
+                  orgs.map((o) => (
+                    <OrganizationCard
+                      key={o.organization_id}
+                      org={o}
+                      active={selOrg?.organization_id === o.organization_id}
+                      onSelect={() => {
+                        setSelOrg(o);
+                        setPlayerVideo(null);
+                      }}
+                    />
+                  ))}
+                {tab === "sessions" &&
+                  sessions.map((s) => (
+                    <SessionCard
+                      key={s.session_id}
+                      session={s}
+                      active={selSession?.session_id === s.session_id}
+                      onSelect={() => {
+                        setSelSession(s);
+                        const links = normalizeSessionVideoLink(s.session_recorded_as_video);
+                        const v = links[0]?.youtube_video;
+                        setPlayerVideo(v ? { ...v, youtube_channel: null } : null);
+                      }}
+                    />
+                  ))}
+              </div>
+            </ScrollArea>
+
+            <section className="min-h-[50vh] overflow-y-auto px-6 py-6 lg:min-h-0" aria-live="polite">
+              {playerVideo ? (
+                <YoutubePlayerWithChapters
+                  videoId={playerVideo.video_id}
+                  url={playerVideo.url}
+                  title={playerVideo.title}
+                  description={playerVideo.description}
+                  durationSeconds={playerVideo.duration_seconds}
+                  duration={playerVideo.duration}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Select a session with a linked recording, or open <strong>YouTube</strong>. For people, use{" "}
+                  <strong>Watch</strong> on an appearance below.
+                </p>
               )}
-            </div>
-          </ScrollArea>
 
-          <section className="min-h-[50vh] overflow-y-auto px-6 py-6 lg:min-h-0" aria-live="polite">
-            {playerVideo ? (
-              <YoutubeEmbed
-                videoId={playerVideo.video_id}
-                url={playerVideo.url}
-                title={playerVideo.title}
-              />
-            ) : tab === "videos" ? (
-              <p className="text-sm text-muted-foreground">Choose a video from the list to play it here.</p>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Select a session with a linked recording, or open <strong>YouTube</strong>. For people, use{" "}
-                <strong>Watch</strong> on an appearance below.
-              </p>
-            )}
-
-            <div className="mt-8">
-              {tab === "persons" && selPerson ? (
-                <PersonDetail person={selPerson} onPlayVideo={(v) => setPlayerVideo(v)} />
-              ) : null}
-              {tab === "organizations" && selOrg ? <OrgDetail org={selOrg} /> : null}
-              {tab === "sessions" && selSession ? (
-                <SessionDetail session={selSession} onPlayVideo={(v) => setPlayerVideo(v)} />
-              ) : null}
-              {tab === "videos" && selVideo ? <VideoDetail video={selVideo} /> : null}
-            </div>
-          </section>
-        </div>
+              <div className="mt-8">
+                {tab === "persons" && selPerson ? (
+                  <PersonDetail
+                    person={selPerson}
+                    onPlayVideo={(v) => setPlayerVideo(v)}
+                    onOpenVideo={navigateToVideo}
+                    onOpenOrg={navigateToOrg}
+                    onOpenSession={navigateToSession}
+                  />
+                ) : null}
+                {tab === "organizations" && selOrg ? (
+                  <OrgDetail org={selOrg} onOpenPerson={navigateToPerson} />
+                ) : null}
+                {tab === "sessions" && selSession ? (
+                  <SessionDetail
+                    session={selSession}
+                    onPlayVideo={(v) => setPlayerVideo(v)}
+                    onOpenPerson={navigateToPerson}
+                    onOpenVideo={navigateToVideo}
+                  />
+                ) : null}
+              </div>
+            </section>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -630,12 +998,239 @@ function pickOrFirst<T, K extends string | number>(
   return rows[0] ?? null;
 }
 
+function mergeById<T, K extends string | number>(
+  prev: T[],
+  row: T,
+  idFn: (row: T) => K,
+): T[] {
+  const pid = idFn(row);
+  const i = prev.findIndex((r) => idFn(r) === pid);
+  if (i >= 0) {
+    const next = [...prev];
+    next[i] = row;
+    return next;
+  }
+  return [row, ...prev];
+}
+
+function VideoDurationFilterPanel({
+  open,
+  onOpenChange,
+  value,
+  onChange,
+  onReset,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  value: YoutubeVideoFilterState;
+  onChange: (v: YoutubeVideoFilterState) => void;
+  onReset: () => void;
+}) {
+  const b = YOUTUBE_VIDEO_FILTER_BOUNDS.durationSec;
+
+  return (
+    <Collapsible open={open} onOpenChange={onOpenChange} className="w-full shrink-0 lg:max-w-[16rem]">
+      <Card className="gap-0 overflow-hidden py-0 shadow-sm">
+        <CollapsibleTrigger
+          className={cn(
+            buttonVariants({ variant: "outline", size: "sm" }),
+            "h-auto w-full justify-between gap-2 rounded-b-none border-b-0 px-3 py-2.5 text-left font-semibold",
+          )}
+          type="button"
+        >
+          <span className="flex min-w-0 items-center gap-2 text-sm">
+            <Filter className="size-4 shrink-0 opacity-80" aria-hidden />
+            <span className="truncate">Duration</span>
+          </span>
+          <ChevronDown
+            className={cn("size-4 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")}
+            aria-hidden
+          />
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <CardContent className="space-y-4 border-t pt-4 pb-4">
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <span className="text-xs font-medium text-foreground">Length range</span>
+                <span className="text-[11px] tabular-nums text-muted-foreground">
+                  {formatFilterDuration(value.minDurationSec)} – {formatFilterDuration(value.maxDurationSec)}
+                </span>
+              </div>
+              <Slider
+                min={b.min}
+                max={b.max}
+                step={30}
+                value={[value.minDurationSec, value.maxDurationSec]}
+                onValueChange={(v) => {
+                  if (typeof v === "number") return;
+                  const [lo, hi] = v as readonly number[];
+                  onChange({ minDurationSec: lo, maxDurationSec: hi });
+                }}
+                aria-label="Filter videos by duration"
+              />
+              <Button type="button" variant="ghost" size="sm" className="h-8 w-full text-xs" onClick={onReset}>
+                Reset to full range
+              </Button>
+            </div>
+          </CardContent>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
+  );
+}
+
+function VideoOverviewContent({ video }: { video: Tables<"youtube_video"> | VideoRow }) {
+  return (
+    <div className="space-y-4 text-sm">
+      {video.description ? (
+        <div className="rounded-lg border border-border/70 bg-muted/25 p-3">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Description</p>
+          <div className="mt-2 max-w-none whitespace-pre-wrap break-words text-[13px] leading-relaxed text-foreground">
+            {video.description}
+          </div>
+        </div>
+      ) : (
+        <p className="text-muted-foreground">No description on file for this recording.</p>
+      )}
+      <dl className="grid grid-cols-1 gap-2 border-t border-border/60 pt-3 text-xs sm:grid-cols-2">
+        {video.view_count != null ? (
+          <div className="flex justify-between gap-2 border-b border-border/40 py-1 sm:block sm:border-0 sm:py-0">
+            <dt className="text-muted-foreground">Views</dt>
+            <dd className="font-medium tabular-nums text-foreground">
+              {Number(video.view_count).toLocaleString()}
+            </dd>
+          </div>
+        ) : null}
+        {video.like_count != null ? (
+          <div className="flex justify-between gap-2 border-b border-border/40 py-1 sm:block sm:border-0 sm:py-0">
+            <dt className="text-muted-foreground">Likes</dt>
+            <dd className="font-medium tabular-nums text-foreground">
+              {Number(video.like_count).toLocaleString()}
+            </dd>
+          </div>
+        ) : null}
+        {video.duration ? (
+          <div className="flex justify-between gap-2 border-b border-border/40 py-1 sm:block sm:border-0 sm:py-0">
+            <dt className="text-muted-foreground">Duration</dt>
+            <dd className="font-medium text-foreground">{video.duration}</dd>
+          </div>
+        ) : null}
+        {video.published_at ? (
+          <div className="flex justify-between gap-2 py-1 sm:block sm:py-0">
+            <dt className="text-muted-foreground">Published</dt>
+            <dd className="font-medium text-foreground">
+              {new Date(video.published_at).toLocaleDateString(undefined, { dateStyle: "medium" })}
+            </dd>
+          </div>
+        ) : null}
+      </dl>
+      {video.url ? (
+        <a
+          className="inline-flex text-xs font-medium text-primary underline-offset-4 hover:underline"
+          href={video.url}
+          target="_blank"
+          rel="noreferrer"
+        >
+          Open on YouTube
+        </a>
+      ) : null}
+    </div>
+  );
+}
+
+function VideoRelationshipsContent({
+  video,
+  onOpenPerson,
+  onOpenSession,
+}: {
+  video: VideoRow;
+  onOpenPerson: (id: string) => void | Promise<void>;
+  onOpenSession: (id: string) => void | Promise<void>;
+}) {
+  const sessLinks = normalizeVideoSessionLink(video.session_recorded_as_video);
+  const matchedSession = sessLinks[0]?.session;
+
+  return (
+    <div className="space-y-4">
+      {matchedSession ? (
+        <RelationshipSection
+          title="Session match"
+          relation="RECORDED_AS"
+          description="Session inferred from title / metadata similarity."
+        >
+          <RelationshipEdgeCard
+            primary={matchedSession.title ?? matchedSession.session_id ?? "Session"}
+            onNavigate={
+              matchedSession.session_id
+                ? () => void onOpenSession(matchedSession.session_id)
+                : undefined
+            }
+          />
+        </RelationshipSection>
+      ) : null}
+
+      {video.person_appeared_in_video?.length ? (
+        <RelationshipSection
+          title="People"
+          relation="APPEARED_IN"
+          description="People detected in this video. Open a profile or stay on this video."
+        >
+          <div className="grid gap-2 sm:grid-cols-2">
+            {video.person_appeared_in_video.map((row, i) => {
+              const pid = row.person?.person_id;
+              return (
+                <RelationshipEdgeCard
+                  key={i}
+                  primary={row.person?.full_name ?? row.person?.person_id ?? "Person"}
+                  secondary={row.matched_name_variant ?? undefined}
+                  onNavigate={pid ? () => void onOpenPerson(pid) : undefined}
+                />
+              );
+            })}
+          </div>
+        </RelationshipSection>
+      ) : null}
+
+      {!matchedSession && !video.person_appeared_in_video?.length ? (
+        <p className="text-sm text-muted-foreground">No linked session or people for this recording.</p>
+      ) : null}
+    </div>
+  );
+}
+
+function VideoRelationshipsDetail({
+  video,
+  onOpenPerson,
+  onOpenSession,
+}: {
+  video: VideoRow;
+  onOpenPerson: (id: string) => void | Promise<void>;
+  onOpenSession: (id: string) => void | Promise<void>;
+}) {
+  return (
+    <div className="w-full space-y-3">
+      <h2 className="text-sm font-semibold tracking-tight text-foreground">Relationships</h2>
+      <VideoRelationshipsContent
+        video={video}
+        onOpenPerson={onOpenPerson}
+        onOpenSession={onOpenSession}
+      />
+    </div>
+  );
+}
+
 function PersonDetail({
   person,
   onPlayVideo,
+  onOpenVideo,
+  onOpenOrg,
+  onOpenSession,
 }: {
   person: PersonRow;
   onPlayVideo: (v: Tables<"youtube_video">) => void;
+  onOpenVideo: (videoId: string) => void | Promise<void>;
+  onOpenOrg: (organizationId: string) => void | Promise<void>;
+  onOpenSession: (sessionId: string) => void | Promise<void>;
 }) {
   return (
     <div className="w-full space-y-5">
@@ -693,13 +1288,17 @@ function PersonDetail({
             description="Organizations this person is linked to as an employee."
           >
             <div className="grid gap-2 sm:grid-cols-2">
-              {person.person_employed_by.map((row, i) => (
-                <RelationshipEdgeCard
-                  key={i}
-                  primary={row.organization?.name ?? row.organization?.organization_id ?? "Organization"}
-                  secondary={row.role_title ?? undefined}
-                />
-              ))}
+              {person.person_employed_by.map((row, i) => {
+                const oid = row.organization?.organization_id;
+                return (
+                  <RelationshipEdgeCard
+                    key={i}
+                    primary={row.organization?.name ?? row.organization?.organization_id ?? "Organization"}
+                    secondary={row.role_title ?? undefined}
+                    onNavigate={oid ? () => void onOpenOrg(oid) : undefined}
+                  />
+                );
+              })}
             </div>
           </RelationshipSection>
         ) : null}
@@ -711,13 +1310,17 @@ function PersonDetail({
             description="Organizations this person founded."
           >
             <div className="grid gap-2 sm:grid-cols-2">
-              {person.person_founded_organization.map((row, i) => (
-                <RelationshipEdgeCard
-                  key={i}
-                  primary={row.organization?.name ?? row.organization?.organization_id ?? "Organization"}
-                  secondary={row.role_title ?? undefined}
-                />
-              ))}
+              {person.person_founded_organization.map((row, i) => {
+                const oid = row.organization?.organization_id;
+                return (
+                  <RelationshipEdgeCard
+                    key={i}
+                    primary={row.organization?.name ?? row.organization?.organization_id ?? "Organization"}
+                    secondary={row.role_title ?? undefined}
+                    onNavigate={oid ? () => void onOpenOrg(oid) : undefined}
+                  />
+                );
+              })}
             </div>
           </RelationshipSection>
         ) : null}
@@ -725,13 +1328,17 @@ function PersonDetail({
         {person.organization_has_ceo?.length ? (
           <RelationshipSection title="CEO role" relation="HAS_CEO" description="Where this person is listed as CEO.">
             <div className="grid gap-2 sm:grid-cols-2">
-              {person.organization_has_ceo.map((row, i) => (
-                <RelationshipEdgeCard
-                  key={i}
-                  primary={row.organization?.name ?? row.organization?.organization_id ?? "Organization"}
-                  secondary={row.role_title ?? undefined}
-                />
-              ))}
+              {person.organization_has_ceo.map((row, i) => {
+                const oid = row.organization?.organization_id;
+                return (
+                  <RelationshipEdgeCard
+                    key={i}
+                    primary={row.organization?.name ?? row.organization?.organization_id ?? "Organization"}
+                    secondary={row.role_title ?? undefined}
+                    onNavigate={oid ? () => void onOpenOrg(oid) : undefined}
+                  />
+                );
+              })}
             </div>
           </RelationshipSection>
         ) : null}
@@ -742,11 +1349,18 @@ function PersonDetail({
             relation="PRESENTED_AT"
             description="Conference sessions this person presented."
           >
-            <ul className="list-inside list-disc space-y-1 text-sm">
-              {person.person_presented_at_session.map((row, i) => (
-                <li key={i}>{row.session?.title ?? row.session?.session_id ?? "Session"}</li>
-              ))}
-            </ul>
+            <div className="grid gap-2 sm:grid-cols-1">
+              {person.person_presented_at_session.map((row, i) => {
+                const sid = row.session?.session_id;
+                return (
+                  <RelationshipEdgeCard
+                    key={i}
+                    primary={row.session?.title ?? row.session?.session_id ?? "Session"}
+                    onNavigate={sid ? () => void onOpenSession(sid) : undefined}
+                  />
+                );
+              })}
+            </div>
           </RelationshipSection>
         ) : null}
 
@@ -761,15 +1375,21 @@ function PersonDetail({
                 const v = row.youtube_video;
                 if (!v) return null;
                 return (
-                  <li key={i} className="flex flex-wrap items-center gap-2 text-sm">
-                    <span className="line-clamp-1 min-w-0 flex-1">
-                      {v.title ?? v.video_id}
-                      {row.matched_name_variant ? (
-                        <span className="text-muted-foreground"> ({row.matched_name_variant})</span>
-                      ) : null}
-                    </span>
-                    <Button type="button" size="xs" variant="default" onClick={() => onPlayVideo(v)}>
-                      Watch
+                  <li key={i} className="flex flex-wrap items-stretch gap-2 text-sm sm:items-center">
+                    <RelationshipEdgeCard
+                      className="min-w-0 flex-1"
+                      primary={<span className="line-clamp-2">{v.title ?? v.video_id}</span>}
+                      secondary={row.matched_name_variant ?? undefined}
+                      onNavigate={() => void onOpenVideo(v.video_id)}
+                    />
+                    <Button
+                      type="button"
+                      size="xs"
+                      variant="secondary"
+                      className="shrink-0 self-center"
+                      onClick={() => onPlayVideo(v)}
+                    >
+                      Watch here
                     </Button>
                   </li>
                 );
@@ -783,7 +1403,13 @@ function PersonDetail({
   );
 }
 
-function OrgDetail({ org }: { org: OrgRow }) {
+function OrgDetail({
+  org,
+  onOpenPerson,
+}: {
+  org: OrgRow;
+  onOpenPerson: (id: string) => void | Promise<void>;
+}) {
   return (
     <Tabs defaultValue="overview" className="w-full gap-4">
       <TabsList>
@@ -802,25 +1428,35 @@ function OrgDetail({ org }: { org: OrgRow }) {
       <TabsContent value="relationships" className="space-y-4">
         {org.organization_has_ceo?.[0]?.person ? (
           <RelationshipSection title="Chief executive" relation="HAS_CEO" description="Mapped CEO for this org.">
-            <RelationshipEdgeCard
-              primary={
-                org.organization_has_ceo[0].person?.full_name ?? org.organization_has_ceo[0].person?.person_id
-              }
-              secondary={org.organization_has_ceo[0].role_title ?? undefined}
-            />
+            {(() => {
+              const edge = org.organization_has_ceo![0];
+              const person = edge.person!;
+              const pid = person.person_id;
+              return (
+                <RelationshipEdgeCard
+                  primary={person.full_name ?? person.person_id}
+                  secondary={edge.role_title ?? undefined}
+                  onNavigate={pid ? () => void onOpenPerson(pid) : undefined}
+                />
+              );
+            })()}
           </RelationshipSection>
         ) : null}
 
         {org.person_founded_organization?.length ? (
           <RelationshipSection title="Founders" relation="FOUNDED" description="People who founded this organization.">
             <div className="grid gap-2 sm:grid-cols-2">
-              {org.person_founded_organization.map((row, i) => (
-                <RelationshipEdgeCard
-                  key={i}
-                  primary={row.person?.full_name ?? row.person?.person_id ?? "Person"}
-                  secondary={row.role_title ?? undefined}
-                />
-              ))}
+              {org.person_founded_organization.map((row, i) => {
+                const pid = row.person?.person_id;
+                return (
+                  <RelationshipEdgeCard
+                    key={i}
+                    primary={row.person?.full_name ?? row.person?.person_id ?? "Person"}
+                    secondary={row.role_title ?? undefined}
+                    onNavigate={pid ? () => void onOpenPerson(pid) : undefined}
+                  />
+                );
+              })}
             </div>
           </RelationshipSection>
         ) : null}
@@ -832,13 +1468,17 @@ function OrgDetail({ org }: { org: OrgRow }) {
             description="People employed by this organization in the graph."
           >
             <div className="grid max-h-[420px] gap-2 overflow-y-auto sm:grid-cols-2">
-              {org.person_employed_by.map((row, i) => (
-                <RelationshipEdgeCard
-                  key={i}
-                  primary={row.person?.full_name ?? row.person?.person_id ?? "Person"}
-                  secondary={row.role_title ?? undefined}
-                />
-              ))}
+              {org.person_employed_by.map((row, i) => {
+                const pid = row.person?.person_id;
+                return (
+                  <RelationshipEdgeCard
+                    key={i}
+                    primary={row.person?.full_name ?? row.person?.person_id ?? "Person"}
+                    secondary={row.role_title ?? undefined}
+                    onNavigate={pid ? () => void onOpenPerson(pid) : undefined}
+                  />
+                );
+              })}
             </div>
           </RelationshipSection>
         ) : null}
@@ -850,9 +1490,13 @@ function OrgDetail({ org }: { org: OrgRow }) {
 function SessionDetail({
   session,
   onPlayVideo,
+  onOpenPerson,
+  onOpenVideo,
 }: {
   session: SessionRow;
   onPlayVideo: (v: Tables<"youtube_video">) => void;
+  onOpenPerson: (id: string) => void | Promise<void>;
+  onOpenVideo: (id: string) => void | Promise<void>;
 }) {
   const links = normalizeSessionVideoLink(session.session_recorded_as_video);
   const video = links[0]?.youtube_video;
@@ -889,12 +1533,16 @@ function SessionDetail({
             description="Speakers linked to this session."
           >
             <div className="grid gap-2 sm:grid-cols-2">
-              {session.person_presented_at_session.map((row, i) => (
-                <RelationshipEdgeCard
-                  key={i}
-                  primary={row.person?.full_name ?? row.person?.person_id ?? "Person"}
-                />
-              ))}
+              {session.person_presented_at_session.map((row, i) => {
+                const pid = row.person?.person_id;
+                return (
+                  <RelationshipEdgeCard
+                    key={i}
+                    primary={row.person?.full_name ?? row.person?.person_id ?? "Person"}
+                    onNavigate={pid ? () => void onOpenPerson(pid) : undefined}
+                  />
+                );
+              })}
             </div>
           </RelationshipSection>
         ) : null}
@@ -905,7 +1553,10 @@ function SessionDetail({
             relation="RECORDED_AS"
             description="Best-matched YouTube video for this talk."
           >
-            <RelationshipEdgeCard primary={video.title ?? video.video_id} />
+            <RelationshipEdgeCard
+              primary={video.title ?? video.video_id}
+              onNavigate={() => void onOpenVideo(video.video_id)}
+            />
             <Button type="button" size="sm" className="mt-2" onClick={() => onPlayVideo(video)}>
               Play in player
             </Button>
@@ -916,57 +1567,3 @@ function SessionDetail({
   );
 }
 
-function VideoDetail({ video }: { video: VideoRow }) {
-  const sessLinks = normalizeVideoSessionLink(video.session_recorded_as_video);
-
-  return (
-    <Tabs defaultValue="overview" className="w-full gap-4">
-      <TabsList>
-        <TabsTrigger value="overview">Overview</TabsTrigger>
-        <TabsTrigger value="relationships">Relationships</TabsTrigger>
-      </TabsList>
-      <TabsContent value="overview" className="space-y-4 text-sm">
-        {video.description ? (
-          <p className="line-clamp-6 whitespace-pre-wrap leading-relaxed md:line-clamp-none">{video.description}</p>
-        ) : null}
-        <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
-          {video.view_count != null ? <span>Views: {Number(video.view_count).toLocaleString()}</span> : null}
-          {video.like_count != null ? <span>Likes: {Number(video.like_count).toLocaleString()}</span> : null}
-          {video.duration ? <span>Duration: {video.duration}</span> : null}
-        </div>
-        {video.url ? (
-          <a className="text-xs font-medium text-primary underline" href={video.url} target="_blank" rel="noreferrer">
-            Open on YouTube
-          </a>
-        ) : null}
-      </TabsContent>
-      <TabsContent value="relationships" className="space-y-4">
-        {sessLinks[0]?.session ? (
-          <RelationshipSection
-            title="Session match"
-            relation="RECORDED_AS"
-            description="Session inferred from title / metadata similarity."
-          >
-            <RelationshipEdgeCard
-              primary={sessLinks[0].session?.title ?? sessLinks[0].session?.session_id ?? "Session"}
-            />
-          </RelationshipSection>
-        ) : null}
-
-        {video.person_appeared_in_video?.length ? (
-          <RelationshipSection
-            title="People"
-            relation="APPEARED_IN"
-            description="People detected in this video."
-          >
-            <div className="grid gap-2 sm:grid-cols-2">
-              {video.person_appeared_in_video.map((row, i) => (
-                <RelationshipEdgeCard key={i} primary={row.person?.full_name ?? row.person?.person_id ?? "Person"} />
-              ))}
-            </div>
-          </RelationshipSection>
-        ) : null}
-      </TabsContent>
-    </Tabs>
-  );
-}
