@@ -8,6 +8,7 @@ import {
   Filter,
   Landmark,
   LayoutGrid,
+  Loader2,
   PanelRight,
   Presentation,
   RefreshCw,
@@ -17,7 +18,7 @@ import {
   X,
 } from "lucide-react";
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   OrganizationCard,
@@ -38,6 +39,31 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+function YoutubePlayerFallback() {
+  return (
+    <div
+      className="flex aspect-video w-full max-w-5xl flex-col items-center justify-center gap-3 rounded-xl border border-border bg-muted/40 mx-auto"
+      role="status"
+      aria-busy="true"
+      aria-label="Loading video player"
+    >
+      <Loader2 className="size-8 animate-spin text-muted-foreground" aria-hidden />
+      <p className="text-center text-xs text-muted-foreground">Loading YouTube player…</p>
+    </div>
+  );
+}
+
+function ListSkeleton({ rows }: { rows: number }) {
+  return (
+    <div className="space-y-2" aria-busy="true" aria-label="Loading list">
+      {Array.from({ length: rows }).map((_, i) => (
+        <div key={i} className="h-16 animate-pulse rounded-lg border border-border bg-muted/50" />
+      ))}
+    </div>
+  );
+}
+
 const YoutubePlayerWithChapters = dynamic(
   () =>
     import("@/components/youtube-player-with-chapters").then((mod) => ({
@@ -45,12 +71,7 @@ const YoutubePlayerWithChapters = dynamic(
     })),
   {
     ssr: false,
-    loading: () => (
-      <div
-        className="aspect-video w-full max-w-5xl animate-pulse rounded-xl border border-border bg-muted mx-auto"
-        aria-hidden
-      />
-    ),
+    loading: () => <YoutubePlayerFallback />,
   },
 );
 import {
@@ -210,7 +231,8 @@ const DIRECTORY_FETCH_LIMIT = "5000";
 
 export function DirectoryExplorer() {
   const [tab, setTab] = useState<Tab>("videos");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const hasLoadedOnceRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
@@ -244,54 +266,75 @@ export function DirectoryExplorer() {
   const load = useCallback(async (q: string, vf: YoutubeVideoFilterState) => {
     setError(null);
     setLoading(true);
-    try {
-      const expand = "1";
-      const listQs = new URLSearchParams({ expand, limit: DIRECTORY_FETCH_LIMIT });
-      if (q) listQs.set("q", q);
-      const videoQs = new URLSearchParams({ expand, limit: DIRECTORY_FETCH_LIMIT });
-      if (q) videoQs.set("q", q);
-      appendYoutubeVideoFilterParams(videoQs, vf);
+    let cancelled = false;
 
-      const [pr, or, se, vi] = await Promise.all([
-        fetch(`/api/persons?${listQs}`),
-        fetch(`/api/organizations?${listQs}`),
-        fetch(`/api/sessions?${listQs}`),
-        fetch(`/api/youtube-videos?${videoQs}`),
-      ]);
+    const expand = "1";
+    const listQs = new URLSearchParams({ expand, limit: DIRECTORY_FETCH_LIMIT });
+    if (q) listQs.set("q", q);
+    const videoQs = new URLSearchParams({ expand, limit: DIRECTORY_FETCH_LIMIT });
+    if (q) videoQs.set("q", q);
+    appendYoutubeVideoFilterParams(videoQs, vf);
 
-      for (const r of [pr, or, se, vi]) {
-        if (!r.ok) {
-          const body = await r.json().catch(() => ({}));
-          throw new Error(
-            typeof body?.error === "string" ? body.error : `${r.status} ${r.statusText}`,
-          );
-        }
+    const fetchList = async <T,>(url: string): Promise<T[]> => {
+      const r = await fetch(url);
+      if (!r.ok) {
+        const body = await r.json().catch(() => ({}));
+        throw new Error(
+          typeof body?.error === "string" ? body.error : `${r.status} ${r.statusText}`,
+        );
       }
+      const j = (await r.json()) as { data: T[] };
+      return j.data ?? [];
+    };
 
-      const [pj, oj, sj, vj] = await Promise.all([
-        pr.json() as Promise<{ data: PersonRow[] }>,
-        or.json() as Promise<{ data: OrgRow[] }>,
-        se.json() as Promise<{ data: SessionRow[] }>,
-        vi.json() as Promise<{ data: VideoRow[] }>,
+    let pData: PersonRow[] | undefined;
+    let oData: OrgRow[] | undefined;
+    let sData: SessionRow[] | undefined;
+    let vData: VideoRow[] | undefined;
+
+    const maybeFinalize = () => {
+      if (cancelled) return;
+      if (pData === undefined || oData === undefined || sData === undefined || vData === undefined) {
+        return;
+      }
+      setSelPerson((prev) => pickOrFirst(pData!, prev, (r) => r.person_id));
+      setSelOrg((prev) => pickOrFirst(oData!, prev, (r) => r.organization_id));
+      setSelSession((prev) => pickOrFirst(sData!, prev, (r) => r.session_id));
+      setSelVideo((prev) => pickOrFirst(vData!, prev, (r) => r.video_id));
+      hasLoadedOnceRef.current = true;
+      setLoading(false);
+    };
+
+    try {
+      await Promise.all([
+        fetchList<PersonRow>(`/api/persons?${listQs}`).then((d) => {
+          if (cancelled) return;
+          pData = d;
+          setPersons(d);
+          maybeFinalize();
+        }),
+        fetchList<OrgRow>(`/api/organizations?${listQs}`).then((d) => {
+          if (cancelled) return;
+          oData = d;
+          setOrgs(d);
+          maybeFinalize();
+        }),
+        fetchList<SessionRow>(`/api/sessions?${listQs}`).then((d) => {
+          if (cancelled) return;
+          sData = d;
+          setSessions(d);
+          maybeFinalize();
+        }),
+        fetchList<VideoRow>(`/api/youtube-videos?${videoQs}`).then((d) => {
+          if (cancelled) return;
+          vData = d;
+          setVideos(d);
+          maybeFinalize();
+        }),
       ]);
-
-      const pData = pj.data ?? [];
-      const oData = oj.data ?? [];
-      const sData = sj.data ?? [];
-      const vData = vj.data ?? [];
-
-      setPersons(pData);
-      setOrgs(oData);
-      setSessions(sData);
-      setVideos(vData);
-
-      setSelPerson((prev) => pickOrFirst(pData, prev, (r) => r.person_id));
-      setSelOrg((prev) => pickOrFirst(oData, prev, (r) => r.organization_id));
-      setSelSession((prev) => pickOrFirst(sData, prev, (r) => r.session_id));
-      setSelVideo((prev) => pickOrFirst(vData, prev, (r) => r.video_id));
     } catch (e) {
+      cancelled = true;
       setError(e instanceof Error ? e.message : "Failed to load directory");
-    } finally {
       setLoading(false);
     }
   }, []);
@@ -659,7 +702,11 @@ export function DirectoryExplorer() {
             onClick={() => void load(debouncedQ, videoFilters)}
           >
             <RefreshCw className={cn("mr-2 size-3.5", loading && "animate-spin")} />
-            {loading ? "Refreshing…" : "Refresh data"}
+            {loading
+              ? hasLoadedOnceRef.current
+                ? "Refreshing…"
+                : "Loading directory…"
+              : "Refresh data"}
           </Button>
         </div>
       </aside>
@@ -719,6 +766,21 @@ export function DirectoryExplorer() {
           )}
         </header>
 
+        {loading ? (
+          <div
+            className="flex items-center gap-2 border-b border-border bg-muted/40 px-6 py-2.5 text-xs text-muted-foreground"
+            role="status"
+            aria-live="polite"
+          >
+            <Loader2 className="size-3.5 shrink-0 animate-spin" aria-hidden />
+            <span>
+              {hasLoadedOnceRef.current
+                ? "Refreshing directory…"
+                : "Loading people, organizations, sessions, and YouTube videos…"}
+            </span>
+          </div>
+        ) : null}
+
         {error ? (
           <div
             className="mx-6 mt-4 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"
@@ -766,14 +828,16 @@ export function DirectoryExplorer() {
                         </div>
                       ) : null}
                       {playerVideo ? (
-                        <YoutubePlayerWithChapters
-                          videoId={playerVideo.video_id}
-                          url={playerVideo.url}
-                          title={playerVideo.title}
-                          description={playerVideo.description}
-                          durationSeconds={playerVideo.duration_seconds}
-                          duration={playerVideo.duration}
-                        />
+                        <Suspense fallback={<YoutubePlayerFallback />}>
+                          <YoutubePlayerWithChapters
+                            videoId={playerVideo.video_id}
+                            url={playerVideo.url}
+                            title={playerVideo.title}
+                            description={playerVideo.description}
+                            durationSeconds={playerVideo.duration_seconds}
+                            duration={playerVideo.duration}
+                          />
+                        </Suspense>
                       ) : (
                         <p className="text-sm text-muted-foreground">
                           Choose a talk from the list below (or from search) to play it here.
@@ -854,7 +918,20 @@ export function DirectoryExplorer() {
                     </Button>
                   </div>
                 </div>
-                {videoSlice.length ? (
+                {loading && !videoSlice.length ? (
+                  <div
+                    className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4"
+                    aria-busy="true"
+                    aria-label="Loading video list"
+                  >
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="aspect-video animate-pulse rounded-lg border border-border bg-muted/60"
+                      />
+                    ))}
+                  </div>
+                ) : videoSlice.length ? (
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
                     {videoSlice.map((v) => (
                       <VideoCard
@@ -896,6 +973,15 @@ export function DirectoryExplorer() {
           <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(280px,380px)_1fr]">
             <ScrollArea className="h-[calc(100dvh-8.5rem)] border-b border-border lg:h-[calc(100dvh-7rem)] lg:border-r lg:border-b-0">
               <div className="space-y-2 p-4 pr-3">
+                {loading && tab === "persons" && !persons.length ? (
+                  <ListSkeleton rows={6} />
+                ) : null}
+                {loading && tab === "organizations" && !orgs.length ? (
+                  <ListSkeleton rows={6} />
+                ) : null}
+                {loading && tab === "sessions" && !sessions.length ? (
+                  <ListSkeleton rows={6} />
+                ) : null}
                 {tab === "persons" &&
                   persons.map((p) => (
                     <PersonCard
@@ -939,14 +1025,16 @@ export function DirectoryExplorer() {
 
             <section className="min-h-[50vh] overflow-y-auto px-6 py-6 lg:min-h-0" aria-live="polite">
               {playerVideo ? (
-                <YoutubePlayerWithChapters
-                  videoId={playerVideo.video_id}
-                  url={playerVideo.url}
-                  title={playerVideo.title}
-                  description={playerVideo.description}
-                  durationSeconds={playerVideo.duration_seconds}
-                  duration={playerVideo.duration}
-                />
+                <Suspense fallback={<YoutubePlayerFallback />}>
+                  <YoutubePlayerWithChapters
+                    videoId={playerVideo.video_id}
+                    url={playerVideo.url}
+                    title={playerVideo.title}
+                    description={playerVideo.description}
+                    durationSeconds={playerVideo.duration_seconds}
+                    duration={playerVideo.duration}
+                  />
+                </Suspense>
               ) : (
                 <p className="text-sm text-muted-foreground">
                   Select a session with a linked recording, or open <strong>YouTube</strong>. For people, use{" "}
