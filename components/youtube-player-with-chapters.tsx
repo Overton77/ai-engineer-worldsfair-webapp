@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useId, useMemo, useRef } from "react";
+import Image from "next/image";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { Loader2, Play } from "lucide-react";
 
 import {
   formatChapterTime,
@@ -28,10 +30,22 @@ function loadYoutubeIframeApi(): Promise<void> {
   if (w.YT?.Player) return Promise.resolve();
 
   return new Promise((resolve) => {
+    let settled = false;
+    let timeoutId = 0;
+
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeoutId);
+      resolve();
+    };
+
+    timeoutId = window.setTimeout(finish, 5000);
+
     const prev = w.onYouTubeIframeAPIReady;
     w.onYouTubeIframeAPIReady = () => {
       prev?.();
-      resolve();
+      finish();
     };
 
     const existing = document.querySelector('script[src*="youtube.com/iframe_api"]');
@@ -69,6 +83,8 @@ type YoutubePlayerWithChaptersProps = {
   description?: string | null;
   durationSeconds?: number | null;
   duration?: string | null;
+  thumbnailUrl?: string | null;
+  loading?: boolean;
   className?: string;
 };
 
@@ -79,6 +95,8 @@ export function YoutubePlayerWithChapters({
   description,
   durationSeconds,
   duration,
+  thumbnailUrl,
+  loading = false,
   className,
 }: YoutubePlayerWithChaptersProps) {
   const resolvedId = resolveYoutubeVideoId(videoId, url);
@@ -94,11 +112,13 @@ export function YoutubePlayerWithChapters({
 
   const iframeDomId = useId().replace(/:/g, "_");
   const playerRef = useRef<YTPlayer | null>(null);
+  const pendingSeekRef = useRef<number | null>(null);
   const isBrowser = typeof window !== "undefined";
   const origin = isBrowser ? window.location.origin : "";
+  const [isActivated, setIsActivated] = useState(false);
 
   useEffect(() => {
-    if (!resolvedId || !origin) return;
+    if (!resolvedId || !origin || !isActivated) return;
     let cancelled = false;
 
     void (async () => {
@@ -118,6 +138,15 @@ export function YoutubePlayerWithChapters({
         events: {
           onReady: (e: { target: YTPlayer }) => {
             if (!cancelled) playerRef.current = e.target;
+            if (!cancelled && pendingSeekRef.current != null) {
+              try {
+                e.target.seekTo(pendingSeekRef.current, true);
+                e.target.playVideo();
+              } catch {
+                /* noop */
+              }
+            }
+            pendingSeekRef.current = null;
           },
         },
       });
@@ -132,9 +161,15 @@ export function YoutubePlayerWithChapters({
       }
       playerRef.current = null;
     };
-  }, [resolvedId, origin, iframeDomId]);
+  }, [resolvedId, origin, iframeDomId, isActivated]);
 
   const seekTo = useCallback((seconds: number) => {
+    if (!isActivated) {
+      pendingSeekRef.current = seconds;
+      setIsActivated(true);
+      return;
+    }
+
     try {
       const p = playerRef.current;
       p?.seekTo?.(seconds, true);
@@ -142,7 +177,7 @@ export function YoutubePlayerWithChapters({
     } catch {
       /* noop */
     }
-  }, []);
+  }, [isActivated]);
 
   if (!resolvedId) {
     return (
@@ -156,6 +191,9 @@ export function YoutubePlayerWithChapters({
       </div>
     );
   }
+
+  const posterSrc =
+    thumbnailUrl?.trim() || `https://i.ytimg.com/vi/${encodeURIComponent(resolvedId)}/hqdefault.jpg`;
 
   if (!isBrowser || !origin) {
     return (
@@ -179,16 +217,48 @@ export function YoutubePlayerWithChapters({
       )}
     >
       <div className="relative aspect-video w-full bg-black">
-        <iframe
-          key={resolvedId}
-          id={iframeDomId}
-          title={title ? `YouTube: ${title}` : "YouTube video"}
-          src={src}
-          className="absolute inset-0 h-full w-full border-0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          referrerPolicy="strict-origin-when-cross-origin"
-          allowFullScreen
-        />
+        {isActivated ? (
+          <iframe
+            key={resolvedId}
+            id={iframeDomId}
+            title={title ? `YouTube: ${title}` : "YouTube video"}
+            src={src}
+            className="absolute inset-0 h-full w-full border-0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            referrerPolicy="strict-origin-when-cross-origin"
+            allowFullScreen
+          />
+        ) : (
+          <button
+            type="button"
+            className="absolute inset-0 block h-full w-full overflow-hidden"
+            onClick={() => setIsActivated(true)}
+            aria-label={title ? `Play ${title}` : "Play YouTube video"}
+          >
+            <Image
+              src={posterSrc}
+              alt={title ? `Poster for ${title}` : "YouTube video poster"}
+              fill
+              priority
+              sizes="(max-width: 1280px) 100vw, 1280px"
+              className="object-cover opacity-85 transition-transform duration-300 hover:scale-[1.02]"
+            />
+            <div className="absolute inset-0 bg-linear-to-t from-black/85 via-black/30 to-black/10" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="inline-flex items-center gap-2 rounded-full bg-black/70 px-5 py-3 text-sm font-medium text-white shadow-lg ring-1 ring-white/20">
+                <Play className="size-4 fill-current" aria-hidden />
+                Play video
+              </span>
+            </div>
+          </button>
+        )}
+
+        {loading ? (
+          <div className="absolute right-3 top-3 inline-flex items-center gap-2 rounded-full bg-black/65 px-3 py-1.5 text-[11px] text-white">
+            <Loader2 className="size-3.5 animate-spin" aria-hidden />
+            Loading details…
+          </div>
+        ) : null}
 
         {segments.length > 0 ? (
           <div

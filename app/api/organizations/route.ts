@@ -4,6 +4,20 @@ import { FTS_OPTIONS } from "@/lib/api/apply-text-search";
 import { parseListParams } from "@/lib/api/list-params";
 import { createServiceClient } from "@/lib/supabase/admin";
 
+const ORGANIZATION_LIST = `
+  organization_id,
+  name,
+  organization_type,
+  website_domain,
+  primary_ai_focus,
+  overview
+`;
+
+const ORGANIZATION_EXPAND = `*,
+  person_employed_by(role_title, confidence, needs_review, person(*)),
+  person_founded_organization(role_title, confidence, needs_review, person(*)),
+  organization_has_ceo(role_title, confidence, needs_review, person(*))`;
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -15,14 +29,7 @@ export async function GET(request: Request) {
 
     let query = supabase
       .from("organization")
-      .select(
-        expand
-          ? `*,
-            person_employed_by(role_title, confidence, needs_review, person(*)),
-            person_founded_organization(role_title, confidence, needs_review, person(*)),
-            organization_has_ceo(role_title, confidence, needs_review, person(*))`
-          : "*",
-      )
+      .select(expand ? ORGANIZATION_EXPAND : ORGANIZATION_LIST)
       .order("name", { ascending: true, nullsFirst: false })
       .range(offset, offset + limit - 1);
 

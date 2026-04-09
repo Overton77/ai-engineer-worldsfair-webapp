@@ -4,6 +4,23 @@ import { FTS_OPTIONS } from "@/lib/api/apply-text-search";
 import { parseListParams } from "@/lib/api/list-params";
 import { createServiceClient } from "@/lib/supabase/admin";
 
+const PERSON_LIST = `
+  person_id,
+  full_name,
+  role_title,
+  first_name,
+  last_name,
+  sessionize_profile_picture_url,
+  tag_line
+`;
+
+const PERSON_EXPAND = `*,
+  person_employed_by(role_title, confidence, needs_review, organization(*)),
+  person_founded_organization(role_title, confidence, needs_review, organization(*)),
+  organization_has_ceo(role_title, confidence, needs_review, organization(*)),
+  person_presented_at_session(session(*)),
+  person_appeared_in_video(matched_name_variant, match_method, youtube_video(*))`;
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -15,16 +32,7 @@ export async function GET(request: Request) {
 
     let query = supabase
       .from("person")
-      .select(
-        expand
-          ? `*,
-            person_employed_by(role_title, confidence, needs_review, organization(*)),
-            person_founded_organization(role_title, confidence, needs_review, organization(*)),
-            organization_has_ceo(role_title, confidence, needs_review, organization(*)),
-            person_presented_at_session(session(*)),
-            person_appeared_in_video(matched_name_variant, match_method, youtube_video(*))`
-          : "*",
-      )
+      .select(expand ? PERSON_EXPAND : PERSON_LIST)
       .order("full_name", { ascending: true, nullsFirst: false })
       .range(offset, offset + limit - 1);
 

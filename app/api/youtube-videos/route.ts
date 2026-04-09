@@ -2,8 +2,29 @@ import { NextResponse } from "next/server";
 
 import { FTS_OPTIONS } from "@/lib/api/apply-text-search";
 import { parseListParams } from "@/lib/api/list-params";
-import { parseYoutubeVideoFiltersFromSearchParams } from "@/lib/api/youtube-video-filters";
 import { createServiceClient } from "@/lib/supabase/admin";
+
+const ALLOWED_SORT_COLUMNS = new Set(["published_at", "view_count", "title", "like_count", "duration_seconds"]);
+
+const VIDEO_LIST = `
+  video_id,
+  title,
+  thumbnail_url,
+  published_at,
+  url,
+  duration,
+  duration_seconds,
+  description,
+  view_count,
+  like_count,
+  channel_id,
+  youtube_channel(channel_title)
+`;
+
+const VIDEO_EXPAND = `*,
+  youtube_channel(*),
+  session_recorded_as_video(match_similarity, session(*)),
+  person_appeared_in_video(matched_name_variant, match_method, person(*))`;
 
 export async function GET(request: Request) {
   try {
@@ -12,48 +33,26 @@ export async function GET(request: Request) {
       maxLimit: 5000,
     });
     const q = searchParams.get("q")?.trim();
-    const vf = parseYoutubeVideoFiltersFromSearchParams(searchParams);
+    const sortBy = searchParams.get("sort_by")?.trim() ?? "published_at";
+    const sortDir = searchParams.get("sort_dir")?.trim() ?? "desc";
     const supabase = createServiceClient();
 
     let query = supabase
       .from("youtube_video")
-      .select(
-        expand
-          ? `*,
-            youtube_channel(*),
-            session_recorded_as_video(match_similarity, session(*)),
-            person_appeared_in_video(matched_name_variant, match_method, person(*))`
-          : "*",
-      );
-
-    if (vf.min_views != null) {
-      query = query.gte("view_count", vf.min_views);
-    }
-    if (vf.max_views != null) {
-      query = query.lte("view_count", vf.max_views);
-    }
-    if (vf.min_likes != null) {
-      query = query.gte("like_count", vf.min_likes);
-    }
-    if (vf.max_likes != null) {
-      query = query.lte("like_count", vf.max_likes);
-    }
-    if (vf.min_duration_sec != null) {
-      query = query.gte("duration_seconds", vf.min_duration_sec);
-    }
-    if (vf.max_duration_sec != null) {
-      query = query.lte("duration_seconds", vf.max_duration_sec);
-    }
+      .select(expand ? VIDEO_EXPAND : VIDEO_LIST, { count: "exact" });
 
     if (q) {
       query = query.textSearch("fts", q, FTS_OPTIONS);
     }
 
+    const column = ALLOWED_SORT_COLUMNS.has(sortBy) ? sortBy : "published_at";
+    const ascending = sortDir === "asc";
+
     query = query
-      .order("published_at", { ascending: false, nullsFirst: false })
+      .order(column, { ascending, nullsFirst: false })
       .range(offset, offset + limit - 1);
 
-    const { data, error } = await query;
+    const { data, error, count } = await query;
     if (error) {
       return NextResponse.json(
         { error: error.message, details: error },
@@ -62,7 +61,13 @@ export async function GET(request: Request) {
     }
     return NextResponse.json({
       data,
-      meta: { limit, offset, filters: vf },
+      meta: {
+        limit,
+        offset,
+        total: count ?? data?.length ?? 0,
+        sort_by: column,
+        sort_dir: sortDir,
+      },
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Unknown error";

@@ -16,11 +16,11 @@ export function RelationshipSection({
   children,
   className,
 }: {
-  title: string
-  relation: string
-  description?: string
-  children: React.ReactNode
-  className?: string
+  title: string;
+  relation: string;
+  description?: string;
+  children: React.ReactNode;
+  className?: string;
 }) {
   return (
     <Card className={cn("gap-0 py-0 shadow-none", className)}>
@@ -37,7 +37,7 @@ export function RelationshipSection({
       </CardHeader>
       <CardContent className="py-3">{children}</CardContent>
     </Card>
-  )
+  );
 }
 
 export function RelationshipEdgeCard({
@@ -47,12 +47,11 @@ export function RelationshipEdgeCard({
   className,
   onNavigate,
 }: {
-  primary: React.ReactNode
-  secondary?: React.ReactNode
-  meta?: React.ReactNode
-  className?: string
-  /** When set, the card is a button and opens the linked entity in the directory. */
-  onNavigate?: () => void
+  primary: React.ReactNode;
+  secondary?: React.ReactNode;
+  meta?: React.ReactNode;
+  className?: string;
+  onNavigate?: () => void;
 }) {
   const body = (
     <>
@@ -62,7 +61,7 @@ export function RelationshipEdgeCard({
       ) : null}
       {meta ? <div className="text-[11px] text-muted-foreground">{meta}</div> : null}
     </>
-  )
+  );
 
   if (onNavigate) {
     return (
@@ -70,13 +69,13 @@ export function RelationshipEdgeCard({
         type="button"
         onClick={onNavigate}
         className={cn(
-          "flex flex-col gap-0.5 rounded-lg border border-border/80 bg-card px-3 py-2 text-left text-sm transition-colors hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          "flex flex-col gap-0.5 rounded-lg border border-border/80 bg-card px-3 py-2 text-left text-sm transition-all hover:border-primary/30 hover:bg-primary/[0.03] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           className,
         )}
       >
         {body}
       </button>
-    )
+    );
   }
 
   return (
@@ -88,9 +87,9 @@ export function RelationshipEdgeCard({
     >
       {body}
     </div>
-  )
+  );
 }
 
 export function RelationshipDivider() {
-  return <Separator className="my-2" />
+  return <Separator className="my-2" />;
 }

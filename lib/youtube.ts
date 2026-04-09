@@ -21,7 +21,7 @@ export function youtubeIframeApiEmbedSrc(videoId: string, origin: string): strin
     enablejsapi: "1",
   });
   if (origin) q.set("origin", origin);
-  return `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?${q}`;
+  return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?${q}`;
 }
 
 export function extractYoutubeVideoIdFromUrl(

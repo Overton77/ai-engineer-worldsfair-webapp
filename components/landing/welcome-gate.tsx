@@ -53,11 +53,11 @@ function WelcomeGateInner({
       >
         <CardHeader className="border-b border-border/80 text-center sm:text-left">
           <CardTitle className="text-xl sm:text-2xl">
-            AI Engineer World’s Fair
+            AI Engineer
           </CardTitle>
           <CardDescription className="text-pretty">
-            Sign in to save progress and open your dashboard, or continue as a
-            guest to browse the directory.
+            Sign in to take notes and save items, or continue as a
+            guest to explore the directory.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6 pt-6">
@@ -168,8 +168,8 @@ function WelcomeGateInner({
             Continue without signing in
           </Link>
           <p className="text-center text-xs text-muted-foreground">
-            You can explore sessions and speakers. Sign in anytime from the
-            header for your dashboard.
+            You can explore sessions and speakers. Sign in anytime for
+            notes and saved items.
           </p>
         </CardContent>
       </Card>

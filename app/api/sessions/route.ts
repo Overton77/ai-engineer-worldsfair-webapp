@@ -3,6 +3,18 @@ import { NextResponse } from "next/server";
 import { parseListParams } from "@/lib/api/list-params";
 import { createServiceClient } from "@/lib/supabase/admin";
 
+const SESSION_LIST = `
+  session_id,
+  title,
+  level,
+  description,
+  extended_description
+`;
+
+const SESSION_EXPAND = `*,
+  person_presented_at_session(person(*)),
+  session_recorded_as_video(match_similarity, youtube_video(*))`;
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -14,13 +26,7 @@ export async function GET(request: Request) {
 
     let query = supabase
       .from("session")
-      .select(
-        expand
-          ? `*,
-            person_presented_at_session(person(*)),
-            session_recorded_as_video(match_similarity, youtube_video(*))`
-          : "*",
-      )
+      .select(expand ? SESSION_EXPAND : SESSION_LIST)
       .order("title", { ascending: true, nullsFirst: false })
       .range(offset, offset + limit - 1);
 

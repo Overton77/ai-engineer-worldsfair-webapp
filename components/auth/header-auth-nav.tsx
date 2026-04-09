@@ -1,10 +1,6 @@
 "use client";
 
-import Link from "next/link";
-
 import { SignOutButton } from "@/components/auth/sign-out-button";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 
 export function HeaderAuthNav({
   user,
@@ -20,23 +16,10 @@ export function HeaderAuthNav({
         >
           {user.email}
         </span>
-        <Link
-          href="/dashboard"
-          className={cn(buttonVariants({ variant: "default", size: "sm" }))}
-        >
-          Dashboard
-        </Link>
         <SignOutButton variant="ghost" size="sm" />
       </>
     );
   }
 
-  return (
-    <Link
-      href="/"
-      className={cn(buttonVariants({ variant: "default", size: "sm" }))}
-    >
-      Sign in
-    </Link>
-  );
+  return null;
 }

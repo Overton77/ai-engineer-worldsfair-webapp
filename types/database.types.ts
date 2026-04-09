@@ -14,6 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      notes: {
+        Row: {
+          content_json: Json
+          content_text: string
+          created_at: string
+          entity_id: string | null
+          entity_title: string | null
+          entity_type: string | null
+          id: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content_json?: Json
+          content_text?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_title?: string | null
+          entity_type?: string | null
+          id?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content_json?: Json
+          content_text?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_title?: string | null
+          entity_type?: string | null
+          id?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization: {
         Row: {
           embedding: string | null
@@ -284,6 +331,74 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "session"
             referencedColumns: ["session_id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          created_at: string
+          display_name: string | null
+          email: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      saved_items: {
+        Row: {
+          created_at: string
+          entity_id: string
+          entity_subtitle: string | null
+          entity_title: string
+          entity_type: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          entity_id: string
+          entity_subtitle?: string | null
+          entity_title: string
+          entity_type: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string
+          entity_subtitle?: string | null
+          entity_title?: string
+          entity_type?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_items_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
         ]
       }

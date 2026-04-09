@@ -6,9 +6,9 @@ export default function AppShellLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <>
+    <div className="flex min-h-dvh flex-col">
       <SiteHeader />
-      {children}
-    </>
+      <div className="flex min-h-0 flex-1">{children}</div>
+    </div>
   );
 }

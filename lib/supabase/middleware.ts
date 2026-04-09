@@ -3,15 +3,14 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { getSupabaseAnonKey, getSupabaseUrl } from "./env";
 
+const PROTECTED_PREFIXES = ["/notes", "/saved", "/profile"];
+
 function copyCookies(from: NextResponse, to: NextResponse) {
   from.cookies.getAll().forEach((c) => {
     to.cookies.set(c.name, c.value);
   });
 }
 
-/**
- * Refreshes the auth session on each matched request. Protects `/dashboard`.
- */
 export async function updateSession(request: NextRequest) {
   const url = getSupabaseUrl();
   const key = getSupabaseAnonKey();
@@ -50,6 +49,15 @@ export async function updateSession(request: NextRequest) {
     return redirectResponse;
   }
 
+  if (pathname.startsWith("/dashboard")) {
+    const dest = request.nextUrl.clone();
+    dest.pathname = user ? "/notes" : "/directory";
+    dest.search = "";
+    const redirectResponse = NextResponse.redirect(dest);
+    copyCookies(supabaseResponse, redirectResponse);
+    return redirectResponse;
+  }
+
   if (
     pathname === "/" &&
     user &&
@@ -65,7 +73,7 @@ export async function updateSession(request: NextRequest) {
     return redirectResponse;
   }
 
-  if (pathname.startsWith("/dashboard") && !user) {
+  if (PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix)) && !user) {
     const home = request.nextUrl.clone();
     home.pathname = "/";
     home.searchParams.set("redirect", pathname);

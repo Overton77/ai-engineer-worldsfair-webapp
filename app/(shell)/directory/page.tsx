@@ -1,18 +1,25 @@
 import { DirectoryExplorer } from "@/components/directory-explorer";
+import { createServerSupabase } from "@/lib/supabase/server";
 
-export default function DirectoryPage() {
+export default async function DirectoryPage() {
+  let viewer: { id: string; email?: string | null } | null = null;
+
+  try {
+    const supabase = await createServerSupabase();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      viewer = { id: user.id, email: user.email ?? null };
+    }
+  } catch {
+    viewer = null;
+  }
+
   return (
     <main className="flex min-h-0 flex-1 flex-col">
-      <div
-        className="border-b border-border bg-muted/50 px-4 py-2.5 text-center text-xs text-muted-foreground sm:text-sm"
-        role="status"
-      >
-        Full AI Engineer course app coming soon — editor support and an integrated
-        AI agent. Sign in from the home screen for your dashboard.
-      </div>
-      <div className="min-h-0 flex-1">
-        <DirectoryExplorer />
-      </div>
+      <DirectoryExplorer viewer={viewer} />
     </main>
   );
 }
