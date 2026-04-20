@@ -1,0 +1,49 @@
+---
+description: Supabase migration workflow — DB lives in MCP, local files lag. Never run `migration repair --status reverted`.
+globs: supabase/migrations/**/*.sql, aiengineerapp/scripts/**/*.ts, aiengineerapp/scripts/**/*.sql, aiengineerapp/package.json
+alwaysApply: false
+---
+
+# Supabase migration workflow
+
+The remote Supabase project (`wkythqbofmckbuoothhn`) and the local
+`supabase/migrations/` directory are **out of sync by design** for now:
+
+- Most schema lands via the **Supabase MCP `apply_migration` tool** during
+  Cursor sessions. Those land in the remote `supabase_migrations.schema_migrations`
+  table with HH:MM:SS timestamps.
+- We commit hand-authored `.sql` files into `supabase/migrations/` with
+  *round* timestamps (e.g. `20260420140000_*.sql`) as **the documented version**
+  of what was applied.
+- The two are not the same files. `supabase migration list` will show ~20+
+  rows split across local-only and remote-only columns.
+
+## Rules
+
+1. **Apply new schema via MCP, not `pnpm db:push`.** `db:push` will refuse
+   because of the divergence. Use the Supabase MCP `apply_migration` tool
+   with the SQL pasted verbatim from the `.sql` file you just authored.
+2. **Always also commit a `.sql` file** under `supabase/migrations/` for any
+   MCP-applied migration. Naming: `YYYYMMDDHHMMSS_<snake_name>.sql` with a
+   round timestamp (e.g. `120000`, `130000`) so it stays human-orderable.
+3. **Never run `supabase migration repair --status reverted ...`** even
+   when the CLI suggests it. Those remote-only timestamps were *real
+   applies* — marking them reverted will cause the next push to try to
+   re-apply schema that already exists, which usually errors mid-run and
+   leaves the DB partially mutated.
+4. **After any DDL change, regenerate types**: `pnpm db:types` from
+   `aiengineerapp/`. Commit the regenerated `types/database.types.ts` in
+   the same change.
+5. **Idempotent DDL only.** Use `create table if not exists`, `drop policy if
+   exists` + `create policy`, `drop constraint if exists` + `add constraint`,
+   etc. So a re-run of `apply_migration` is a no-op rather than a hard fail.
+6. **Backfills go in their own follow-up script** under `aiengineerapp/scripts/`,
+   not inside the migration. Tiny one-row touch-ups are OK inline; anything
+   that loops over rows is a script.
+
+## When the divergence is finally cleaned up
+
+The cleanup pass is `supabase migration repair --status applied <local-timestamps>`
+followed by `supabase db pull` to capture the remote-only files into local.
+Do not attempt this without the user explicitly asking — it is a
+multi-step coordinated operation.
