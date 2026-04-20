@@ -1,92 +1,38 @@
+import "server-only";
+
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { z } from "zod";
 
 import {
   CATEGORY_KEYS,
   DOMAIN_LAYERS,
-  type CategoryKey,
-  type DomainLayer,
 } from "@/lib/schema/taxonomy";
 import { createServerSupabase } from "@/lib/supabase/server";
 import type { Database } from "@/types/database.types";
 
+import {
+  EXPLORE_SORTS,
+  ExploreRowSchema,
+  type ExploreFilters,
+  type ExploreKind,
+  type ExploreResult,
+  type ExploreRow,
+  type ExploreSort,
+} from "./explore-shared";
+
+export {
+  EXPLORE_KIND_LABELS,
+  EXPLORE_KINDS,
+  EXPLORE_SORTS,
+  ExploreKindSchema,
+  ExploreRowSchema,
+  type ExploreFilters,
+  type ExploreKind,
+  type ExploreResult,
+  type ExploreRow,
+  type ExploreSort,
+} from "./explore-shared";
+
 type Client = SupabaseClient<Database>;
-
-/**
- * Entity kinds that have a per-entity Explore RPC. The `/explore/[type]`
- * UI is constrained to this allowlist; any other type 404s.
- */
-export const EXPLORE_KINDS = [
-  "person",
-  "organization",
-  "library",
-  "paper",
-  "session",
-  "youtube_video",
-] as const;
-
-export type ExploreKind = (typeof EXPLORE_KINDS)[number];
-
-export const ExploreKindSchema = z.enum(EXPLORE_KINDS);
-
-export const EXPLORE_KIND_LABELS: Record<ExploreKind, string> = {
-  person: "People",
-  organization: "Organizations",
-  library: "Libraries",
-  paper: "Papers",
-  session: "Talks",
-  youtube_video: "Videos",
-};
-
-/**
- * Sort modes the Explore UI exposes. `relevance` is only meaningful when
- * `q` is non-empty (otherwise the SQL falls back to the kind's default).
- */
-export const EXPLORE_SORTS = [
-  "relevance",
-  "popularity",
-  "recent",
-  "alpha",
-] as const;
-export type ExploreSort = (typeof EXPLORE_SORTS)[number];
-
-export type ExploreFilters = {
-  q?: string;
-  layers?: readonly DomainLayer[];
-  categories?: readonly CategoryKey[];
-  tags?: readonly string[];
-  sort?: ExploreSort;
-  limit?: number;
-  offset?: number;
-};
-
-/**
- * The shape every `explore_<kind>` RPC returns. Matches the SQL function
- * signature (`out_tags` because `tags` is the input parameter name).
- */
-export const ExploreRowSchema = z.object({
-  entity_id: z.string(),
-  slug: z.string().nullable(),
-  title: z.string(),
-  subtitle: z.string().nullable(),
-  image_url: z.string().nullable(),
-  description: z.string().nullable(),
-  snippet: z.string().nullable(),
-  rank: z.number().nullable(),
-  popularity: z.number().nullable(),
-  recent_at: z.string().nullable(),
-  total_count: z.number(),
-  layer: z.string().nullable(),
-  category: z.string().nullable(),
-  out_tags: z.array(z.string()).nullable(),
-});
-
-export type ExploreRow = z.infer<typeof ExploreRowSchema>;
-
-export type ExploreResult = {
-  rows: ExploreRow[];
-  total: number;
-};
 
 const DEFAULT_LIMIT = 24;
 const MAX_LIMIT = 100;
@@ -155,8 +101,8 @@ function pickSort(
  * Per-entity-kind Explore search. Wraps the matching `explore_<kind>`
  * RPC with type-safe input sanitisation and zod-validated output.
  *
- * Returns an empty result with `total=0` for unknown kinds rather than
- * throwing — UI consumers render an empty state.
+ * Server-only — UI consumers go through the `exploreAction` Server
+ * Action in `app/actions/explore.ts`.
  */
 export async function exploreEntities(
   kind: ExploreKind,

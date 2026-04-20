@@ -42,7 +42,7 @@ import {
   type ExploreKind,
   type ExploreSort,
   type ExploreRow,
-} from "@/lib/search/explore";
+} from "@/lib/search/explore-shared";
 import { cn } from "@/lib/utils";
 import { ENTITY_HREF } from "@/types/domain";
 import { exploreAction } from "@/app/actions/explore";
