@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Toaster } from "sonner";
 
 import { ThemeProvider } from "@/components/theme-provider";
 
@@ -16,9 +17,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AI Engineer",
+  title: {
+    default: "AI Engineer",
+    template: "%s · AI Engineer",
+  },
   description:
-    "Explore leading engineers and companies building cutting-edge AI — sessions and talks from the AI Engineer World's Fair.",
+    "An open learning platform for AI engineers — explore the people, libraries, talks, papers, courses, and challenges shaping the field.",
 };
 
 export default function RootLayout({
@@ -32,7 +36,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="flex min-h-dvh flex-col font-sans antialiased">
+      <body className="bg-background text-foreground flex min-h-dvh flex-col font-sans antialiased">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -40,6 +44,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {children}
+          <Toaster richColors position="top-right" closeButton />
         </ThemeProvider>
       </body>
     </html>

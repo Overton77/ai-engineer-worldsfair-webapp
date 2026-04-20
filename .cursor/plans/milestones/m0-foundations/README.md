@@ -4,6 +4,10 @@
 >
 > Canonical sequencing + gate: [`../../05-milestones.md#m0--foundations`](../../05-milestones.md)
 
+- **Branch:** `m0-foundations` (one PR for the whole milestone — see [`git-branch-workflow.mdc`](../../../rules/git-branch-workflow.mdc))
+- **Status:** not-started
+- **PR:** —
+
 **Prereqs folder:** the [U0.x micro-units](../../prereqs/README.md) from the
 2026-04-20 open-questions resolutions must land before M0 is sealed. They're
 small (mostly migrations + tiny helpers) and don't themselves block U1.x

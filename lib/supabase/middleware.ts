@@ -3,22 +3,24 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { getSupabaseAnonKey, getSupabaseUrl } from "./env";
 
-const PROTECTED_PREFIXES = ["/notes", "/saved", "/profile"];
-
-function copyCookies(from: NextResponse, to: NextResponse) {
-  from.cookies.getAll().forEach((c) => {
-    to.cookies.set(c.name, c.value);
-  });
-}
-
-export async function updateSession(request: NextRequest) {
+/**
+ * Refreshes Supabase auth cookies on every request. Returns
+ * `{ response, user, profile }` so the proxy can decide whether to
+ * redirect (auth gates, onboarding gating) before sending the
+ * cookie-bearing response back to the browser.
+ *
+ * The dance with cookies is unavoidable: the SSR client sets cookies
+ * on the *outgoing* response object, so we have to construct it
+ * eagerly and clone it whenever Supabase rotates a cookie.
+ */
+export async function refreshSession(request: NextRequest) {
   const url = getSupabaseUrl();
   const key = getSupabaseAnonKey();
-  if (!url || !key) {
-    return NextResponse.next({ request });
-  }
 
-  let supabaseResponse = NextResponse.next({ request });
+  let response = NextResponse.next({ request });
+  if (!url || !key) {
+    return { response, user: null, onboardingStatus: null };
+  }
 
   const supabase = createServerClient(url, key, {
     cookies: {
@@ -26,10 +28,12 @@ export async function updateSession(request: NextRequest) {
         return request.cookies.getAll();
       },
       setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-        supabaseResponse = NextResponse.next({ request });
+        cookiesToSet.forEach(({ name, value }) =>
+          request.cookies.set(name, value),
+        );
+        response = NextResponse.next({ request });
         cookiesToSet.forEach(({ name, value, options }) =>
-          supabaseResponse.cookies.set(name, value, options),
+          response.cookies.set(name, value, options),
         );
       },
     },
@@ -39,48 +43,27 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const pathname = request.nextUrl.pathname;
-
-  if (pathname === "/login") {
-    const home = request.nextUrl.clone();
-    home.pathname = "/";
-    const redirectResponse = NextResponse.redirect(home);
-    copyCookies(supabaseResponse, redirectResponse);
-    return redirectResponse;
+  let onboardingStatus: string | null = null;
+  if (user) {
+    // Onboarding gate optimistic check. RLS makes this a one-row
+    // self-read; tolerable on every navigation.
+    const { data } = await supabase
+      .from("profiles")
+      .select("onboarding_status")
+      .eq("id", user.id)
+      .maybeSingle();
+    onboardingStatus = data?.onboarding_status ?? null;
   }
 
-  if (pathname.startsWith("/dashboard")) {
-    const dest = request.nextUrl.clone();
-    dest.pathname = user ? "/notes" : "/directory";
-    dest.search = "";
-    const redirectResponse = NextResponse.redirect(dest);
-    copyCookies(supabaseResponse, redirectResponse);
-    return redirectResponse;
-  }
+  return { response, user, onboardingStatus };
+}
 
-  if (
-    pathname === "/" &&
-    user &&
-    !request.nextUrl.searchParams.has("error") &&
-    !request.nextUrl.searchParams.has("message") &&
-    !request.nextUrl.searchParams.has("redirect")
-  ) {
-    const dir = request.nextUrl.clone();
-    dir.pathname = "/directory";
-    dir.search = "";
-    const redirectResponse = NextResponse.redirect(dir);
-    copyCookies(supabaseResponse, redirectResponse);
-    return redirectResponse;
-  }
-
-  if (PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix)) && !user) {
-    const home = request.nextUrl.clone();
-    home.pathname = "/";
-    home.searchParams.set("redirect", pathname);
-    const redirectResponse = NextResponse.redirect(home);
-    copyCookies(supabaseResponse, redirectResponse);
-    return redirectResponse;
-  }
-
-  return supabaseResponse;
+export function copyCookies(
+  from: NextResponse,
+  to: NextResponse,
+): NextResponse {
+  from.cookies.getAll().forEach((c) => {
+    to.cookies.set(c.name, c.value);
+  });
+  return to;
 }

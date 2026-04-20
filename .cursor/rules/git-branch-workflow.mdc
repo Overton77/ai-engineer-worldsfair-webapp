@@ -1,0 +1,95 @@
+---
+description: Branch → PR → merge workflow. One branch per milestone (M0..M8). Units become commits with [UX.Y] prefix.
+globs: aiengineerapp/.cursor/plans/**/*.md, aiengineerapp/package.json, aiengineerapp/**/*.ts, aiengineerapp/**/*.tsx
+alwaysApply: false
+---
+
+# Git branch workflow
+
+**One branch per milestone.** Each milestone (M0..M8 plus the `prereqs`
+group) lives on a single long-lived feature branch off `main`. Individual
+units become **commits** with a `[UX.Y]` prefix, not branches.
+
+Why: solo development; per-unit branches were too much ceremony. Units
+still have their own `.md` stub for status tracking; the branch granularity
+just changes.
+
+## Branch names (the only branches you make)
+
+Match the folder slug under `plans/milestones/` or `plans/prereqs/`:
+
+| Branch | Covers | Files under |
+|---|---|---|
+| `prereqs` | U0.1–U0.10 | `plans/prereqs/` |
+| `m0-foundations` | U1.1–U1.5 | `plans/milestones/m0-foundations/` |
+| `m1-identity` | U2.x + U9.1 | `plans/milestones/m1-identity/` |
+| `m2-exploration-v1` | U3.x | `plans/milestones/m2-exploration-v1/` |
+| `m3-capture-v1` | U4.x | `plans/milestones/m3-capture-v1/` |
+| `m4-home-assistant-v1` | U5.1, U6.1, U6.2, U9.2 | `plans/milestones/m4-home-assistant-v1/` |
+| `m5-curriculum-v1` | U7.x | `plans/milestones/m5-curriculum-v1/` |
+| `m6-recommender-assistant-v2` | U5.2, U6.3, U6.4, U9.3 | `plans/milestones/m6-recommender-assistant-v2/` |
+| `m7-arena-v1` | U8.1–U8.5 | `plans/milestones/m7-arena-v1/` |
+| `m8-arena-v2` | U8.6, U9.4, U9.5 | `plans/milestones/m8-arena-v2/` |
+
+## Commit message convention
+
+Every commit on a milestone branch starts with the unit ID it advances:
+
+```
+[U1.1] auth: add server/browser/service supabase clients
+[U1.1] tooling: add zod env loader + typed config
+[U1.2] auth: add requireUser + middleware redirect
+[U1.3] shell: scaffold left rail + top bar + theme toggle
+```
+
+Imperative mood. Body optional. The `[UX.Y]` prefix lets `git log` filter
+work cleanly and lets the PR description list units by `git log --grep`.
+
+## Lifecycle
+
+1. **Start the milestone**
+   ```
+   git checkout main && git pull --ff-only origin main
+   git checkout -b m2-exploration-v1
+   ```
+2. **Pick the first unit** from the milestone's `README.md` (top of table).
+3. **Flip status** in the unit's `.md` file: `Status: not-started → in-progress`.
+4. **Commit small** with the `[UX.Y]` prefix. Push early so CI runs.
+5. **Finish a unit** → flip its status to `done-on-branch`, tick acceptance
+   boxes. Move to the next unit on the same branch.
+6. **Open the PR** as soon as the first unit is reviewable; keep pushing
+   subsequent units to the same branch — the PR updates in place.
+   - **Title:** `M2 — Exploration v1`
+   - **Body:** paste the milestone README's unit table; check off units as
+     they complete; link any migrations applied via Supabase MCP.
+   - Paste the PR URL into the milestone `README.md` once.
+7. **Review + green CI required** before merge. Fix on the same branch.
+8. **Merge the PR with a merge commit** (NOT squash). Per-unit commits
+   stay in `main` history so `git log --grep '\[U1.1\]'` works forever.
+9. **Delete the branch** on merge. Flip every unit's status to `merged`,
+   add the merge commit SHA at the top of each unit file's working log.
+10. **Update milestone `README.md`**: status row → `merged`, paste the
+    final merge SHA.
+
+## Hard rules
+
+- **Never commit directly to `main`.**
+- **Never force-push to `main`.** Force-push to milestone branches is OK
+  but rare; prefer `git pull --rebase origin main` to absorb merges from
+  other branches (e.g. when `prereqs` lands while you're on `m2-*`).
+- **Never `git push` without an explicit user ask.** The agent commits
+  freely; the user pushes.
+- **Never skip hooks** (`--no-verify`) unless the user explicitly asks.
+- **Migrations + types ride in the same commit** — see
+  [`supabase-migrations.mdc`](./supabase-migrations.mdc).
+- **Squash-merge is forbidden for milestone PRs.** Merge commit only, so
+  per-unit history survives.
+
+## Cross-milestone dependencies
+
+If unit X.Y needs work that belongs to a later milestone branch, pause
+and surface it. Do not start a second milestone branch in parallel unless
+the dependency graph genuinely allows it (e.g. `prereqs` and `m0-foundations`
+can run side by side because `prereqs` is U0.x-only). When two branches
+do run in parallel, the second one starts from `main` *after* the first
+has merged, or rebases onto `main` whenever the first lands.

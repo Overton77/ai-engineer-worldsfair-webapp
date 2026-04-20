@@ -40,27 +40,46 @@ before M0 is sealed.
 
 ## How to use this folder
 
-1. **Pick the next unit** from the milestone's `README.md` (top-down).
-2. **Create the branch** — name = unit-id kebab, e.g. `u1-1-project-shell`.
-   See [`.cursor/rules/git-branch-workflow.mdc`](../../rules/git-branch-workflow.mdc).
-3. **Open the unit's file** and flip `Status: not-started → in-progress`.
-4. **Do the work** against the spec in `../04-implementation-units.md` and
-   the relevant wireframe section in `../03-wireframes.md`.
-5. **Open a PR** — title = `UX.Y — <unit title>` (matches the unit's H1).
-   Paste the PR URL into the unit file.
-6. **Merge** — squash merge into `main`, delete the branch, flip
-   `Status: in-progress → merged`, paste the merge commit SHA.
-7. **Update the milestone README** table row.
+**One branch per milestone.** Units become commits with a `[UX.Y]` prefix.
 
-## Status legend
+1. **Open the milestone's `README.md`**. The top of the file lists the
+   branch name and the ordered unit table.
+2. **Create the milestone branch once** — e.g. `git checkout -b
+   m2-exploration-v1` from `main`. See
+   [`.cursor/rules/git-branch-workflow.mdc`](../../rules/git-branch-workflow.mdc).
+3. **Pick the next unit** in the table. Open its `.md` stub and flip
+   `Status: not-started → in-progress`.
+4. **Do the work** against the spec in `../04-implementation-units.md`
+   and the wireframe in `../03-wireframes.md`. Commit with `[UX.Y] …`
+   prefix on every commit.
+5. **Finish the unit** → flip its status to `done-on-branch`, tick
+   acceptance boxes. Move to the next unit on the same branch.
+6. **Open ONE PR for the milestone** as soon as the first unit is
+   reviewable. Title = `M2 — Exploration v1`. Keep pushing more units to
+   the same branch; the PR updates in place.
+7. **Merge with a merge commit** (NOT squash) so per-unit `[UX.Y]` history
+   survives in `main`. Delete the branch.
+8. **Flip every unit's status to `merged`** and paste the merge SHA.
+   Update the milestone README's status row.
+
+## Status legend (per unit)
 
 | Status | Meaning |
 |---|---|
-| `not-started` | No branch, no PR. |
-| `in-progress` | Branch exists, code being written, not yet reviewable. |
-| `in-review` | PR open, awaiting review / CI. |
-| `merged` | Squash-merged into `main`, branch deleted. |
-| `blocked` | Waiting on another unit (link it) or an open question. |
+| `not-started` | Not begun on the milestone branch yet. |
+| `in-progress` | Currently being written; commits exist on the branch. |
+| `done-on-branch` | All acceptance boxes ticked; awaiting milestone PR merge. |
+| `merged` | Milestone PR merged into `main`. |
+| `blocked` | Waiting on another unit or an open question (link it). |
+
+## Status legend (per milestone)
+
+| Status | Meaning |
+|---|---|
+| `not-started` | Branch not yet created. |
+| `in-progress` | Branch exists; some units `done-on-branch`, others not. |
+| `in-review` | PR open, all units `done-on-branch`. |
+| `merged` | PR merged into `main`. |
 
 ## Top-down reading order for new contributors
 

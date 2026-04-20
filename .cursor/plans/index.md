@@ -18,6 +18,20 @@ exploration / notes / search / recommendation / course / challenge application.
 | 05 | [`05-milestones.md`](./05-milestones.md) | Draft milestone groupings rolled up from units |
 | 06 | [`06-open-questions.md`](./06-open-questions.md) | Decisions that need future validation before implementation |
 
+## Build queue (live-edited)
+
+The planning docs above are the **source of truth**; the folders below are
+the **work tracker** (branch name, status, PR link, working log per unit).
+
+| Folder | Contents |
+|---|---|
+| [`milestones/`](./milestones/README.md) | One folder per milestone (M0..M8). Each has a `README.md` (unit table + gate + decision cross-refs) and one `uX-Y-<slug>.md` stub per unit. |
+| [`prereqs/`](./prereqs/README.md) | U0.x micro-units surfaced by the 2026-04-20 pass through [`06-open-questions.md`](./06-open-questions.md). Ship these before / alongside M0. |
+
+**Workflow rule:** every unit gets its own branch, PR, and squash-merge
+into `main`. See
+[`.cursor/rules/git-branch-workflow.mdc`](../rules/git-branch-workflow.mdc).
+
 ## Reading order
 
 1. Skim `00-overview.md` for the framing and assumption list.

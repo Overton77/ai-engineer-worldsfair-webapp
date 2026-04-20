@@ -78,7 +78,21 @@ export type Database = {
             foreignKeyName: "attempt_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "current_user_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "attempt_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attempt_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile"
             referencedColumns: ["id"]
           },
         ]
@@ -323,7 +337,21 @@ export type Database = {
             foreignKeyName: "course_enrollment_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "current_user_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "course_enrollment_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_enrollment_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile"
             referencedColumns: ["id"]
           },
         ]
@@ -518,7 +546,21 @@ export type Database = {
             foreignKeyName: "course_module_review_reviewer_id_fkey"
             columns: ["reviewer_id"]
             isOneToOne: false
+            referencedRelation: "current_user_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "course_module_review_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_module_review_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile"
             referencedColumns: ["id"]
           },
         ]
@@ -727,7 +769,21 @@ export type Database = {
             foreignKeyName: "image_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "current_user_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "image_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "image_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "public_profile"
             referencedColumns: ["id"]
           },
         ]
@@ -1058,7 +1114,21 @@ export type Database = {
             foreignKeyName: "module_completion_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "current_user_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "module_completion_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "module_completion_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile"
             referencedColumns: ["id"]
           },
         ]
@@ -1295,7 +1365,21 @@ export type Database = {
             foreignKeyName: "notes_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "current_user_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "notes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile"
             referencedColumns: ["id"]
           },
         ]
@@ -2142,7 +2226,21 @@ export type Database = {
             foreignKeyName: "profile_followed_entity_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "current_user_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "profile_followed_entity_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profile_followed_entity_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile"
             referencedColumns: ["id"]
           },
         ]
@@ -2164,6 +2262,7 @@ export type Database = {
           home_layer: string | null
           id: string
           interest_tags: string[]
+          is_admin: boolean
           is_public: boolean
           linked_accounts: Json
           location: string | null
@@ -2190,6 +2289,7 @@ export type Database = {
           home_layer?: string | null
           id: string
           interest_tags?: string[]
+          is_admin?: boolean
           is_public?: boolean
           linked_accounts?: Json
           location?: string | null
@@ -2216,6 +2316,7 @@ export type Database = {
           home_layer?: string | null
           id?: string
           interest_tags?: string[]
+          is_admin?: boolean
           is_public?: boolean
           linked_accounts?: Json
           location?: string | null
@@ -2497,7 +2598,21 @@ export type Database = {
             foreignKeyName: "saved_items_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "current_user_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "saved_items_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saved_items_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile"
             referencedColumns: ["id"]
           },
         ]
@@ -2548,7 +2663,21 @@ export type Database = {
             foreignKeyName: "score_event_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "current_user_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "score_event_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "score_event_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile"
             referencedColumns: ["id"]
           },
         ]
@@ -2803,9 +2932,72 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      current_user_stats: {
+        Row: {
+          streak_days: number | null
+          user_id: string | null
+          xp_total: number | null
+        }
+        Insert: {
+          streak_days?: never
+          user_id?: string | null
+          xp_total?: number | null
+        }
+        Update: {
+          streak_days?: never
+          user_id?: string | null
+          xp_total?: number | null
+        }
+        Relationships: []
+      }
+      public_profile: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          country: string | null
+          current_role_title: string | null
+          display_name: string | null
+          expertise_tags: string[] | null
+          headline: string | null
+          id: string | null
+          interest_tags: string[] | null
+          is_public: boolean | null
+          username: string | null
+          xp_total: number | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          country?: string | null
+          current_role_title?: string | null
+          display_name?: string | null
+          expertise_tags?: string[] | null
+          headline?: string | null
+          id?: string | null
+          interest_tags?: string[] | null
+          is_public?: boolean | null
+          username?: string | null
+          xp_total?: number | null
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          country?: string | null
+          current_role_title?: string | null
+          display_name?: string | null
+          expertise_tags?: string[] | null
+          headline?: string | null
+          id?: string | null
+          interest_tags?: string[] | null
+          is_public?: boolean | null
+          username?: string | null
+          xp_total?: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      current_streak_days: { Args: { p_user_id: string }; Returns: number }
       immutable_array_to_string: {
         Args: { arr: string[]; delim: string }
         Returns: string

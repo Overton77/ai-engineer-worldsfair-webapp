@@ -12,6 +12,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Out-of-app code:
+    "scripts/**",
+    "personal_archives/**",
+    ".agents/**",
+    ".cursor/**",
   ]),
 ]);
 

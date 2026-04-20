@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react"
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cva, type VariantProps } from "class-variance-authority"
 
@@ -42,19 +43,55 @@ const buttonVariants = cva(
   }
 )
 
+type ButtonProps = ButtonPrimitive.Props &
+  VariantProps<typeof buttonVariants> & {
+    /**
+     * When true, render as the single child element (e.g. `<Link>`),
+     * forwarding props and class names. Maps to Base UI's `render` prop
+     * so the rest of the codebase can use the familiar shadcn idiom.
+     */
+    asChild?: boolean
+  }
+
 function Button({
   className,
   variant = "default",
   size = "default",
+  asChild = false,
+  children,
   ...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+}: ButtonProps) {
+  const merged = cn(buttonVariants({ variant, size, className }))
+
+  if (asChild) {
+    // Pluck the single React element out of `children`. We tolerate
+    // surrounding whitespace text nodes that the JSX runtime can leave
+    // behind in some build setups (React Compiler / Turbopack).
+    const elements = React.Children.toArray(children).filter(
+      React.isValidElement,
+    ) as React.ReactElement[]
+    if (elements.length !== 1) {
+      throw new Error(
+        `Button asChild expects exactly one React element child; got ${elements.length}.`,
+      )
+    }
+    return (
+      <ButtonPrimitive
+        data-slot="button"
+        className={merged}
+        nativeButton={false}
+        render={elements[0]}
+        {...props}
+      />
+    )
+  }
+
   return (
-    <ButtonPrimitive
-      data-slot="button"
-      className={cn(buttonVariants({ variant, size, className }))}
-      {...props}
-    />
+    <ButtonPrimitive data-slot="button" className={merged} {...props}>
+      {children}
+    </ButtonPrimitive>
   )
 }
 
 export { Button, buttonVariants }
+export type { ButtonProps }

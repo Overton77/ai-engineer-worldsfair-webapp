@@ -2,7 +2,7 @@
 
 - **Milestone:** [M0 — Foundations](./README.md)
 - **Spec:** [`04-implementation-units.md` § U1.1](../../04-implementation-units.md)
-- **Branch:** `u1-1-project-shell`
+- **Commit prefix:** `[U1.1]` (lands on milestone branch [`m0-foundations`](./README.md))
 - **Status:** not-started
 - **PR:** —
 - **Depends on:** none (first unit)

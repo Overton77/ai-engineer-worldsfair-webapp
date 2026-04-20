@@ -4,6 +4,10 @@
 >
 > Canonical sequencing + gate: [`../../05-milestones.md#m2--exploration-v1`](../../05-milestones.md)
 
+- **Branch:** `m2-exploration-v1` (one PR for the whole milestone — see [`git-branch-workflow.mdc`](../../../rules/git-branch-workflow.mdc))
+- **Status:** not-started
+- **PR:** —
+
 ## Units
 
 | Unit | File | Status | PR |

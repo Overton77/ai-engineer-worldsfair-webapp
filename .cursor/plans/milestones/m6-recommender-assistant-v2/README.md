@@ -4,6 +4,10 @@
 >
 > Canonical sequencing + gate: [`../../05-milestones.md#m6--recommender-v2--assistant-v2`](../../05-milestones.md)
 
+- **Branch:** `m6-recommender-assistant-v2` (one PR for the whole milestone — see [`git-branch-workflow.mdc`](../../../rules/git-branch-workflow.mdc))
+- **Status:** not-started
+- **PR:** —
+
 ## Units
 
 | Unit | File | Status | PR |
