@@ -32,6 +32,30 @@
 A dogfood user produces ≥ 5 notes and ≥ 10 saves in a session without
 confusion.
 
+### Verification status (2026-04-20)
+
+- `pnpm typecheck` — green
+- `pnpm test` — 14 files / **76 tests pass** (added 21 new tests across
+  this milestone: notifications DAL, saves DAL, follows DAL, notes DAL,
+  derive-text + formatTimestamp, TimestampMention round-trip,
+  click-to-seek contract)
+- `pnpm build` — green; all M3 routes compile (`/notes`, `/notes/[id]`,
+  `/saved`, `/follows`, every dossier with `<NotesSplitShell>` wrap)
+
+Manual dogfood pass to be recorded by the user before opening the PR.
+
+#### Dogfood checklist (from build plan)
+
+- [ ] Save 10 entities across ≥ 3 kinds without leaving Explore.
+- [ ] Take 1 freeform note (`/notes` "+ New freeform"), 2 entity-pinned
+      notes via N1 drawer, 1 via N2 split, 1 via N3 watch+notes.
+- [ ] Insert ≥ 2 timestamp citations (⌘⇧K or ⏱ toolbar in Watch+Notes)
+      and ≥ 2 entity mentions; confirm both link out correctly.
+- [ ] Search `/notes` for `14:02` (or any timestamp inside a note); a
+      hit confirms `notes.fts` indexes the derived MM:SS text.
+- [ ] On any video, toggle theatre + focus modes; playback continues
+      uninterrupted through the layout switches.
+
 ## Wireframe rethink (read first)
 
 The notes UX for M3 has been re-imagined in
