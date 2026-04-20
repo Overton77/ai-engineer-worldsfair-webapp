@@ -1,27 +1,25 @@
 "use client";
 
 import { Search } from "lucide-react";
-import { toast } from "sonner";
 
+import { useCommandPalette } from "@/components/command-palette/command-palette-context";
 import { Button } from "@/components/ui/button";
 
 /**
- * Cmd-K placeholder. Real palette ships in U3.1; for now we just keep
- * the slot warm so the chrome looks finished and the keyboard hint is
- * already wired.
+ * Top-bar trigger that opens the global ⌘K command palette. The
+ * keyboard shortcut is also bound globally inside
+ * <CommandPaletteProvider>, but the visible button keeps the chrome
+ * discoverable for mouse users.
  */
 export function CommandTrigger() {
+  const { setOpen } = useCommandPalette();
   return (
     <Button
       type="button"
       variant="outline"
       size="sm"
       className="text-muted-foreground hidden h-9 w-72 justify-between gap-2 px-3 sm:inline-flex"
-      onClick={() =>
-        toast.message("Search", {
-          description: "Cmd-K palette ships in U3.1.",
-        })
-      }
+      onClick={() => setOpen(true)}
     >
       <span className="inline-flex items-center gap-2">
         <Search className="size-4" />

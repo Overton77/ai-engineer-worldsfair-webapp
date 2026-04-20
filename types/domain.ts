@@ -53,6 +53,7 @@ export const ENTITY_HREF: Record<EntityKind, (slugOrId: string) => string> = {
   challenge: (s) => `/challenges/${s}`,
   attempt: (s) => `/attempts/${s}`,
   image: (s) => `/image/${s}`,
+  notes: (s) => `/notes/${s}`,
 };
 
 /**

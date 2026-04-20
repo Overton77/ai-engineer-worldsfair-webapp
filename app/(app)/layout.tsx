@@ -1,3 +1,5 @@
+import { CommandPalette } from "@/components/command-palette/command-palette";
+import { CommandPaletteProvider } from "@/components/command-palette/command-palette-context";
 import { LeftRail } from "@/components/shell/left-rail";
 import { MobileNav } from "@/components/shell/mobile-nav";
 import { TopBar } from "@/components/shell/top-bar";
@@ -19,19 +21,22 @@ export default async function AppLayout({
   const email = shell.email || user.email || "";
 
   return (
-    <div className="bg-background flex min-h-dvh flex-col">
-      <TopBar
-        email={email}
-        displayName={shell.displayName}
-        avatarUrl={shell.avatarUrl}
-      />
-      <div className="mx-auto flex w-full max-w-[1600px] flex-1">
-        <LeftRail xpTotal={stats.xpTotal} streakDays={stats.streakDays} />
-        <main className="min-w-0 flex-1 px-4 pt-6 pb-24 md:px-8 md:pb-10">
-          {children}
-        </main>
+    <CommandPaletteProvider>
+      <div className="bg-background flex min-h-dvh flex-col">
+        <TopBar
+          email={email}
+          displayName={shell.displayName}
+          avatarUrl={shell.avatarUrl}
+        />
+        <div className="mx-auto flex w-full max-w-[1600px] flex-1">
+          <LeftRail xpTotal={stats.xpTotal} streakDays={stats.streakDays} />
+          <main className="min-w-0 flex-1 px-4 pt-6 pb-24 md:px-8 md:pb-10">
+            {children}
+          </main>
+        </div>
+        <MobileNav />
+        <CommandPalette />
       </div>
-      <MobileNav />
-    </div>
+    </CommandPaletteProvider>
   );
 }

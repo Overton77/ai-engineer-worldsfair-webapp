@@ -92,6 +92,7 @@ describe("toEntitySummary", () => {
       ["challenge", "/challenges/x"],
       ["attempt", "/attempts/x"],
       ["image", "/image/x"],
+      ["notes", "/notes/x"],
     ];
     for (const [kind, expected] of cases) {
       expect(toEntitySummary(kind, { slug: "x" }).href).toBe(expected);

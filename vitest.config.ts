@@ -14,6 +14,11 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./", import.meta.url)),
+      // Stub Next.js' server-only guard in unit tests; the module is a
+      // dev-time barrier, not runtime behaviour.
+      "server-only": fileURLToPath(
+        new URL("./vitest.server-only-stub.ts", import.meta.url),
+      ),
     },
   },
 });
