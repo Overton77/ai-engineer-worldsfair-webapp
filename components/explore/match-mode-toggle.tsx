@@ -1,6 +1,6 @@
 "use client";
 
-import { Sparkles, Type } from "lucide-react";
+import { Sparkles, Type, Zap } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -11,6 +11,10 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
+/**
+ * Internal mode keys are kept stable so URL state doesn't churn; the
+ * UI labels the user sees are intentionally non-technical.
+ */
 export type MatchMode = "lexical" | "semantic" | "hybrid";
 
 type MatchModeToggleProps = {
@@ -21,18 +25,24 @@ type MatchModeToggleProps = {
   className?: string;
 };
 
-const MODE_META: Record<MatchMode, { label: string; help: string }> = {
+const MODE_META: Record<
+  MatchMode,
+  { label: string; help: string; icon: typeof Type }
+> = {
   lexical: {
-    label: "Lexical (FTS)",
-    help: "Postgres full-text search with weighted columns.",
+    label: "By name",
+    help: "Match titles, names, and tags exactly.",
+    icon: Type,
   },
   semantic: {
-    label: "Semantic",
-    help: "Pure pgvector similarity over chunk embeddings.",
+    label: "By meaning",
+    help: "Match the idea, not just the words.",
+    icon: Sparkles,
   },
   hybrid: {
-    label: "Hybrid",
-    help: "RRF fusion of FTS + semantic over the chunk store (recommended).",
+    label: "Smart",
+    help: "Best of both — recommended.",
+    icon: Zap,
   },
 };
 
@@ -58,7 +68,7 @@ export function MatchModeToggle({
           const meta = MODE_META[mode];
           const isAvailable = available.includes(mode);
           const isActive = value === mode;
-          const Icon = mode === "lexical" ? Type : Sparkles;
+          const Icon = meta.icon;
 
           const button = (
             <Button

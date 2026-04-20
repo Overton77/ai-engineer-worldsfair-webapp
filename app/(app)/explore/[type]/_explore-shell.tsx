@@ -17,9 +17,6 @@ import {
   FilterSidebar,
   type FilterValue,
 } from "@/components/explore/filter-sidebar";
-import {
-  MatchModeToggle,
-} from "@/components/explore/match-mode-toggle";
 import { ResultList } from "@/components/explore/result-list";
 import { SearchInput } from "@/components/explore/search-input";
 import {
@@ -238,20 +235,6 @@ export function ExploreShell({
           onChangeValue={(next) => setParams({ q: next })}
           placeholder={`Search ${EXPLORE_KIND_LABELS[kind]}…`}
         />
-        <div className="flex flex-wrap items-center gap-2">
-          <MatchModeToggle
-            value="lexical"
-            onChange={() => undefined}
-            available={["lexical"]}
-          />
-          <span className="text-muted-foreground text-xs">
-            Per-table FTS via <code>explore_{kind}s</code> (
-            {trimmedQ
-              ? "ranked by ts_rank_cd, snippets via ts_headline"
-              : "browsing — no query"}
-            ).
-          </span>
-        </div>
       </header>
 
       <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
@@ -278,12 +261,6 @@ export function ExploreShell({
               tags: row.out_tags ?? undefined,
             },
             snippet: row.snippet,
-            scoreBadge:
-              trimmedQ && typeof row.rank === "number"
-                ? `rank ${row.rank.toFixed(2)}`
-                : availability.popularity && row.popularity
-                  ? `pop ${formatPopularity(row.popularity)}`
-                  : undefined,
           }))}
           total={total}
           loading={loading}
@@ -364,10 +341,4 @@ function KindTabs({ activeKind, q }: { activeKind: ExploreKind; q: string }) {
 
 function kindToEntityKind(k: ExploreKind) {
   return k;
-}
-
-function formatPopularity(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
-  return n.toFixed(0);
 }

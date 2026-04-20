@@ -6,6 +6,11 @@ import * as React from "react";
 import { toast } from "sonner";
 
 import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@/components/ui/avatar";
+import {
   CommandDialog,
   CommandEmpty,
   CommandGroup,
@@ -189,14 +194,8 @@ export function CommandPalette() {
                     value={`${hit.kind}::${hit.id}::${hit.title}`}
                     onSelect={() => navigate(hit)}
                   >
-                    <EntityKindIcon
-                      kind={hit.kind}
-                      className="text-muted-foreground"
-                    />
+                    <PaletteRowAvatar hit={hit} />
                     <span className="flex-1 truncate">{hit.title}</span>
-                    <span className="text-muted-foreground text-[10px] font-mono tabular-nums">
-                      {hit.similarity.toFixed(2)}
-                    </span>
                     <RowQuickActions hit={hit} />
                     <CommandShortcut>
                       <ArrowRight className="size-3" />
@@ -263,6 +262,32 @@ function Chip({
     >
       {children}
     </button>
+  );
+}
+
+function initialsOf(t: string): string {
+  return t
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((s) => s[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
+function PaletteRowAvatar({ hit }: { hit: PaletteHit }) {
+  if (hit.imageUrl) {
+    return (
+      <Avatar className="size-6 shrink-0">
+        <AvatarImage src={hit.imageUrl} alt="" />
+        <AvatarFallback className="text-[9px]">
+          {initialsOf(hit.title)}
+        </AvatarFallback>
+      </Avatar>
+    );
+  }
+  return (
+    <span className="bg-muted text-muted-foreground inline-flex size-6 shrink-0 items-center justify-center rounded-full">
+      <EntityKindIcon kind={hit.kind} className="size-3" />
+    </span>
   );
 }
 
