@@ -6,6 +6,9 @@ import { NotesPlaceholder } from "@/components/dossier/notes-placeholder";
 import { RelationshipSection } from "@/components/dossier/relationship-section";
 import { Separator } from "@/components/ui/separator";
 import { getEventDossier } from "@/lib/db/dossier";
+import { getSaveFollowState } from "@/lib/db/save-follow-state";
+import { refKey } from "@/lib/db/saves";
+import { ENTITY_HREF } from "@/types/domain";
 
 type EventPageProps = {
   params: Promise<{ slug: string }>;
@@ -33,6 +36,9 @@ export default async function EventDossierPage({ params }: EventPageProps) {
   if (!dossier) notFound();
 
   const { event } = dossier;
+  const entityRef = { kind: "event" as const, id: event.event_id };
+  const ssState = await getSaveFollowState([entityRef]);
+  const k = refKey(entityRef);
   const dateRange =
     event.start_date && event.end_date
       ? `${fmtDate(event.start_date)} → ${fmtDate(event.end_date)}`
@@ -50,6 +56,10 @@ export default async function EventDossierPage({ params }: EventPageProps) {
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
       <DossierHero
         kind="event"
+        entityId={event.event_id}
+        href={ENTITY_HREF.event(event.slug)}
+        initialSaved={ssState.saved.has(k)}
+        initialFollowing={ssState.following.has(k)}
         title={event.name}
         subtitle={event.tagline}
         description={event.description}

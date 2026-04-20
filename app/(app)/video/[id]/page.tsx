@@ -5,6 +5,9 @@ import { NotesPlaceholder } from "@/components/dossier/notes-placeholder";
 import { RelationshipSection } from "@/components/dossier/relationship-section";
 import { Separator } from "@/components/ui/separator";
 import { getVideoDossier } from "@/lib/db/dossier";
+import { getSaveFollowState } from "@/lib/db/save-follow-state";
+import { refKey } from "@/lib/db/saves";
+import { ENTITY_HREF } from "@/types/domain";
 
 import { VideoShell } from "./_video-shell";
 
@@ -40,6 +43,9 @@ export default async function VideoDossierPage({ params }: VideoPageProps) {
   if (!dossier) notFound();
 
   const { video } = dossier;
+  const entityRef = { kind: "youtube_video" as const, id };
+  const ssState = await getSaveFollowState([entityRef]);
+  const k = refKey(entityRef);
   const links = [
     video.url ? { label: "YouTube", href: video.url } : null,
   ].filter((l): l is { label: string; href: string } => l !== null);
@@ -51,6 +57,10 @@ export default async function VideoDossierPage({ params }: VideoPageProps) {
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
       <DossierHero
         kind="youtube_video"
+        entityId={id}
+        href={ENTITY_HREF.youtube_video(id)}
+        initialSaved={ssState.saved.has(k)}
+        initialFollowing={ssState.following.has(k)}
         title={video.title ?? id}
         subtitle={dossier.channelTitle}
         description={video.description}

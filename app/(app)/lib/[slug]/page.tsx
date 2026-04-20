@@ -6,6 +6,9 @@ import { NotesPlaceholder } from "@/components/dossier/notes-placeholder";
 import { RelationshipSection } from "@/components/dossier/relationship-section";
 import { Separator } from "@/components/ui/separator";
 import { getLibraryDossier } from "@/lib/db/dossier";
+import { getSaveFollowState } from "@/lib/db/save-follow-state";
+import { refKey } from "@/lib/db/saves";
+import { ENTITY_HREF } from "@/types/domain";
 
 type LibraryPageProps = {
   params: Promise<{ slug: string }>;
@@ -31,6 +34,9 @@ export default async function LibraryDossierPage({ params }: LibraryPageProps) {
   if (!dossier) notFound();
 
   const { library: lib } = dossier;
+  const entityRef = { kind: "library" as const, id: lib.slug };
+  const ssState = await getSaveFollowState([entityRef]);
+  const k = refKey(entityRef);
   const links = [
     lib.homepage_url ? { label: "Homepage", href: lib.homepage_url } : null,
     lib.docs_url ? { label: "Docs", href: lib.docs_url } : null,
@@ -59,6 +65,10 @@ export default async function LibraryDossierPage({ params }: LibraryPageProps) {
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
       <DossierHero
         kind="library"
+        entityId={lib.slug}
+        href={ENTITY_HREF.library(lib.slug)}
+        initialSaved={ssState.saved.has(k)}
+        initialFollowing={ssState.following.has(k)}
         title={lib.name}
         subtitle={lib.tagline}
         description={lib.description}

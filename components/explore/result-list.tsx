@@ -13,6 +13,8 @@ import { EntityCard, type EntityCardVariant } from "./entity-card";
 type RowExtras = {
   snippet?: string | null;
   scoreBadge?: string;
+  initialSaved?: boolean;
+  initialFollowing?: boolean;
 };
 
 type ResultListProps = {
@@ -80,6 +82,8 @@ export function ResultList({
               entity={row.entity}
               snippet={row.snippet}
               scoreBadge={row.scoreBadge}
+              initialSaved={row.initialSaved}
+              initialFollowing={row.initialFollowing}
               variant={variant}
             />
           ))}

@@ -83,6 +83,9 @@ type ExploreShellProps = {
   initialQuery: string;
   initialFilter: FilterValue;
   initialSort: ExploreSort;
+  /** SSR-resolved save/follow state for the FIRST page of rows only. */
+  initialSavedKeys?: string[];
+  initialFollowingKeys?: string[];
 };
 
 export function ExploreShell({
@@ -92,7 +95,17 @@ export function ExploreShell({
   initialQuery,
   initialFilter,
   initialSort,
+  initialSavedKeys,
+  initialFollowingKeys,
 }: ExploreShellProps) {
+  const initialSavedSet = React.useMemo(
+    () => new Set(initialSavedKeys ?? []),
+    [initialSavedKeys],
+  );
+  const initialFollowingSet = React.useMemo(
+    () => new Set(initialFollowingKeys ?? []),
+    [initialFollowingKeys],
+  );
   const [params, setParams] = useQueryStates({
     q: parseAsString.withDefault(initialQuery),
     sort: parseAsStringLiteral(EXPLORE_SORTS).withDefault(initialSort),
@@ -246,22 +259,27 @@ export function ExploreShell({
         />
         <ResultList
           variant={kind === "youtube_video" ? "media" : "result"}
-          rows={rows.map((row) => ({
-            entity: {
-              kind: kindToEntityKind(kind),
-              id: row.entity_id,
-              slug: row.slug,
-              title: row.title,
-              subtitle: row.subtitle,
-              description: row.description,
-              imageUrl: row.image_url,
-              href: ENTITY_HREF[kindToEntityKind(kind)](
-                row.slug ?? row.entity_id,
-              ),
-              tags: row.out_tags ?? undefined,
-            },
-            snippet: row.snippet,
-          }))}
+          rows={rows.map((row) => {
+            const k = `${kindToEntityKind(kind)}:${row.entity_id}`;
+            return {
+              entity: {
+                kind: kindToEntityKind(kind),
+                id: row.entity_id,
+                slug: row.slug,
+                title: row.title,
+                subtitle: row.subtitle,
+                description: row.description,
+                imageUrl: row.image_url,
+                href: ENTITY_HREF[kindToEntityKind(kind)](
+                  row.slug ?? row.entity_id,
+                ),
+                tags: row.out_tags ?? undefined,
+              },
+              snippet: row.snippet,
+              initialSaved: initialSavedSet.has(k),
+              initialFollowing: initialFollowingSet.has(k),
+            };
+          })}
           total={total}
           loading={loading}
           loadingMore={loadingMore}

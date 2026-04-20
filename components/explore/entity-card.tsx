@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, Bookmark, Pencil } from "lucide-react";
-import { toast } from "sonner";
 
+import { FollowButton } from "@/components/save-follow/follow-button";
+import { NoteButton } from "@/components/save-follow/note-button";
+import { SaveButton } from "@/components/save-follow/save-button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import type { FollowEntityKind } from "@/lib/schema/entity-kind";
 import { cn } from "@/lib/utils";
 import type { EntitySummary } from "@/types/domain";
 
@@ -23,12 +24,6 @@ function sanitizeSnippet(html: string): string {
     .replace(/<(?!\/?mark\b)[^>]*>/gi, "")
     .replace(/<mark>/gi, '<mark class="bg-yellow-200 dark:bg-yellow-500/40 rounded px-0.5">')
     .replace(/<\/mark>/gi, "</mark>");
-}
-
-function placeholderToast(action: string, entityTitle: string) {
-  toast.message(`${action} coming soon`, {
-    description: `Save / follow / note ship in M3. (${entityTitle})`,
-  });
 }
 
 function initialsOf(title: string): string {
@@ -50,6 +45,9 @@ type EntityCardProps = {
   scoreBadge?: string;
   /** When true, show Save / Follow / Note quick actions. */
   actions?: boolean;
+  /** SSR-resolved state so the buttons render correctly on first paint. */
+  initialSaved?: boolean;
+  initialFollowing?: boolean;
   className?: string;
 };
 
@@ -59,6 +57,8 @@ export function EntityCard({
   snippet,
   scoreBadge,
   actions = true,
+  initialSaved = false,
+  initialFollowing = false,
   className,
 }: EntityCardProps) {
   const tags = entity.tags ?? [];
@@ -183,30 +183,37 @@ export function EntityCard({
 
         {actions ? (
           <div className="mt-3 flex items-center gap-1">
-            <Button
+            <SaveButton
+              entity={{
+                kind: entity.kind,
+                id: entity.id,
+                title: entity.title,
+                subtitle: entity.subtitle ?? null,
+              }}
+              initialSaved={initialSaved}
               size="xs"
               variant="ghost"
-              onClick={() => placeholderToast("Save", entity.title)}
-            >
-              <Bookmark className="size-3" />
-              Save
-            </Button>
-            <Button
+            />
+            <FollowButton
+              entity={{
+                kind: entity.kind as FollowEntityKind,
+                id: entity.id,
+                title: entity.title,
+                url: entity.href,
+              }}
+              initialFollowing={initialFollowing}
               size="xs"
               variant="ghost"
-              onClick={() => placeholderToast("Follow", entity.title)}
-            >
-              <Bell className="size-3" />
-              Follow
-            </Button>
-            <Button
+            />
+            <NoteButton
+              entity={{
+                kind: entity.kind,
+                id: entity.id,
+                title: entity.title,
+              }}
               size="xs"
               variant="ghost"
-              onClick={() => placeholderToast("Note", entity.title)}
-            >
-              <Pencil className="size-3" />
-              Note
-            </Button>
+            />
           </div>
         ) : null}
       </div>

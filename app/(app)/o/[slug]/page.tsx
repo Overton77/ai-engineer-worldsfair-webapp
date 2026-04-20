@@ -6,6 +6,9 @@ import { NotesPlaceholder } from "@/components/dossier/notes-placeholder";
 import { RelationshipSection } from "@/components/dossier/relationship-section";
 import { Separator } from "@/components/ui/separator";
 import { getOrganizationDossier } from "@/lib/db/dossier";
+import { getSaveFollowState } from "@/lib/db/save-follow-state";
+import { refKey } from "@/lib/db/saves";
+import { ENTITY_HREF } from "@/types/domain";
 
 type OrgPageProps = {
   params: Promise<{ slug: string }>;
@@ -26,6 +29,9 @@ export default async function OrganizationDossierPage({
   if (!dossier) notFound();
 
   const { organization: org } = dossier;
+  const entityRef = { kind: "organization" as const, id: org.organization_id };
+  const ssState = await getSaveFollowState([entityRef]);
+  const k = refKey(entityRef);
   const links = [
     org.homepage_url ? { label: "Website", href: org.homepage_url } : null,
     org.github_org
@@ -45,6 +51,10 @@ export default async function OrganizationDossierPage({
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
       <DossierHero
         kind="organization"
+        entityId={org.organization_id}
+        href={ENTITY_HREF.organization(org.slug)}
+        initialSaved={ssState.saved.has(k)}
+        initialFollowing={ssState.following.has(k)}
         title={org.name ?? org.slug}
         subtitle={org.primary_ai_focus ?? org.organization_type ?? null}
         description={org.overview}

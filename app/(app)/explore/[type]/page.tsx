@@ -6,6 +6,7 @@ import {
   type CategoryKey,
   type DomainLayer,
 } from "@/lib/schema/taxonomy";
+import { getSaveFollowState } from "@/lib/db/save-follow-state";
 import {
   EXPLORE_KIND_LABELS,
   EXPLORE_KINDS,
@@ -81,6 +82,15 @@ export default async function ExploreTypePage({
     return { rows: [], total: 0 };
   });
 
+  // Pre-resolve save / follow state for the SSR'd first page so cards
+  // render with the right initial labels. Subsequent pages (load-more
+  // + filter changes) are fetched client-side and start as not-saved /
+  // not-following — that's an acceptable degradation; the toggle still
+  // works correctly server-side.
+  const ssState = await getSaveFollowState(
+    result.rows.map((r) => ({ kind, id: r.entity_id })),
+  );
+
   return (
     <div className="mx-auto max-w-6xl">
       <ExploreShell
@@ -90,6 +100,8 @@ export default async function ExploreTypePage({
         initialQuery={q}
         initialFilter={{ layers, categories, tags }}
         initialSort={sort}
+        initialSavedKeys={Array.from(ssState.saved)}
+        initialFollowingKeys={Array.from(ssState.following)}
       />
     </div>
   );

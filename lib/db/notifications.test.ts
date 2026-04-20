@@ -9,6 +9,18 @@ import {
 
 type Resp<T> = { data: T | null; error: { message: string } | null; count?: number };
 
+type BuilderCalls = {
+  table: string;
+  select: string | null;
+  selectOptions: { count?: string; head?: boolean } | null;
+  filters: Array<[string, string, unknown]>;
+  update: Record<string, unknown> | null;
+  insert: Record<string, unknown> | null;
+  order?: { col: string; ascending: boolean };
+  limit?: number;
+  isSingle: boolean;
+};
+
 /**
  * Minimal chainable mock: every method returns `this`, terminal
  * methods (`single`, `then`) resolve. We assert against the registered
@@ -17,17 +29,6 @@ type Resp<T> = { data: T | null; error: { message: string } | null; count?: numb
 function buildMock(
   handlers: Record<string, (b: BuilderCalls) => unknown>,
 ) {
-  type BuilderCalls = {
-    table: string;
-    select: string | null;
-    selectOptions: { count?: string; head?: boolean } | null;
-    filters: Array<[string, string, unknown]>;
-    update: Record<string, unknown> | null;
-    insert: Record<string, unknown> | null;
-    order?: { col: string; ascending: boolean };
-    limit?: number;
-    isSingle: boolean;
-  };
 
   const calls: BuilderCalls[] = [];
 

@@ -6,6 +6,9 @@ import { NotesPlaceholder } from "@/components/dossier/notes-placeholder";
 import { RelationshipSection } from "@/components/dossier/relationship-section";
 import { Separator } from "@/components/ui/separator";
 import { getSessionDossier } from "@/lib/db/dossier";
+import { getSaveFollowState } from "@/lib/db/save-follow-state";
+import { refKey } from "@/lib/db/saves";
+import { ENTITY_HREF } from "@/types/domain";
 
 type TalkPageProps = {
   params: Promise<{ slug: string }>;
@@ -24,6 +27,9 @@ export default async function TalkDossierPage({ params }: TalkPageProps) {
   if (!dossier) notFound();
 
   const { session } = dossier;
+  const entityRef = { kind: "session" as const, id: session.session_id };
+  const ssState = await getSaveFollowState([entityRef]);
+  const k = refKey(entityRef);
   const links = [
     session.slides_url ? { label: "Slides", href: session.slides_url } : null,
     session.code_repo_url
@@ -35,6 +41,10 @@ export default async function TalkDossierPage({ params }: TalkPageProps) {
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
       <DossierHero
         kind="session"
+        entityId={session.session_id}
+        href={ENTITY_HREF.session(session.slug)}
+        initialSaved={ssState.saved.has(k)}
+        initialFollowing={ssState.following.has(k)}
         title={session.title ?? session.slug}
         subtitle={session.track ?? session.session_format ?? null}
         description={session.description ?? session.extended_description}

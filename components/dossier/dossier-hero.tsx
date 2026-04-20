@@ -1,19 +1,22 @@
-"use client";
-
-import { ArrowLeft, Bell, Bookmark, Bot, Pencil } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { toast } from "sonner";
 
+import { AssistantPlaceholderButton } from "./assistant-placeholder-button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { FollowButton } from "@/components/save-follow/follow-button";
+import { NoteButton } from "@/components/save-follow/note-button";
+import { SaveButton } from "@/components/save-follow/save-button";
 import { cn } from "@/lib/utils";
-import type { EntityKind } from "@/lib/schema/entity-kind";
+import type { EntityKind, FollowEntityKind } from "@/lib/schema/entity-kind";
 
 import { EntityKindChip } from "../explore/entity-kind-chip";
 
 type DossierHeroProps = {
   kind: EntityKind;
+  /** Stable ID matching the column saved_items.entity_id uses. */
+  entityId: string;
   title: string;
   subtitle?: string | null;
   description?: string | null;
@@ -26,6 +29,13 @@ type DossierHeroProps = {
   backHref?: string;
   backLabel?: string;
   className?: string;
+  /** SSR-resolved state so buttons render with correct initial labels. */
+  initialSaved?: boolean;
+  initialFollowing?: boolean;
+  /** Notes count badge for the Note button (e.g. "Note (3)"). */
+  notesCount?: number;
+  /** Where this entity lives — used as the click-through on follow notifications. */
+  href?: string;
 };
 
 function initialsOf(t: string): string {
@@ -36,14 +46,9 @@ function initialsOf(t: string): string {
     .join("");
 }
 
-function placeholder(action: string, title: string) {
-  toast.message(`${action} coming soon`, {
-    description: `Action wires up in M3. (${title})`,
-  });
-}
-
 export function DossierHero({
   kind,
+  entityId,
   title,
   subtitle,
   description,
@@ -54,6 +59,10 @@ export function DossierHero({
   backHref,
   backLabel,
   className,
+  initialSaved = false,
+  initialFollowing = false,
+  notesCount = 0,
+  href,
 }: DossierHeroProps) {
   const visibleMeta = (meta ?? []).filter(
     (m): m is string => typeof m === "string" && m.length > 0,
@@ -140,44 +149,27 @@ export function DossierHero({
         </div>
 
         <div className="flex shrink-0 flex-wrap gap-1">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => placeholder("Save", title)}
-          >
-            <Bookmark className="size-3.5" />
-            Save
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => placeholder("Follow", title)}
-          >
-            <Bell className="size-3.5" />
-            Follow
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => placeholder("Note", title)}
-          >
-            <Pencil className="size-3.5" />
-            Note
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() =>
-              toast.message("Assistant coming soon", {
-                description: "Ask-the-assistant ships in M4.",
-              })
-            }
-          >
-            <Bot className="size-3.5" />
-            Ask
-          </Button>
+          <SaveButton
+            entity={{ kind, id: entityId, title, subtitle }}
+            initialSaved={initialSaved}
+          />
+          <FollowButton
+            entity={{
+              kind: kind as FollowEntityKind,
+              id: entityId,
+              title,
+              url: href ?? null,
+            }}
+            initialFollowing={initialFollowing}
+          />
+          <NoteButton
+            entity={{ kind, id: entityId, title }}
+            count={notesCount}
+          />
+          <AssistantPlaceholderButton title={title} />
         </div>
       </div>
     </header>
   );
 }
+

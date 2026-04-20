@@ -6,6 +6,9 @@ import { NotesPlaceholder } from "@/components/dossier/notes-placeholder";
 import { RelationshipSection } from "@/components/dossier/relationship-section";
 import { Separator } from "@/components/ui/separator";
 import { getPersonDossier } from "@/lib/db/dossier";
+import { getSaveFollowState } from "@/lib/db/save-follow-state";
+import { refKey } from "@/lib/db/saves";
+import { ENTITY_HREF } from "@/types/domain";
 
 type PersonPageProps = {
   params: Promise<{ slug: string }>;
@@ -24,6 +27,9 @@ export default async function PersonDossierPage({ params }: PersonPageProps) {
   if (!dossier) notFound();
 
   const { person } = dossier;
+  const entityRef = { kind: "person" as const, id: person.person_id };
+  const ssState = await getSaveFollowState([entityRef]);
+  const k = refKey(entityRef);
   const links = [
     person.github_username
       ? {
@@ -49,6 +55,10 @@ export default async function PersonDossierPage({ params }: PersonPageProps) {
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
       <DossierHero
         kind="person"
+        entityId={person.person_id}
+        href={ENTITY_HREF.person(person.slug)}
+        initialSaved={ssState.saved.has(k)}
+        initialFollowing={ssState.following.has(k)}
         title={person.full_name ?? person.slug}
         subtitle={person.tag_line ?? person.role_title ?? null}
         description={person.bio ?? person.notable_for ?? null}

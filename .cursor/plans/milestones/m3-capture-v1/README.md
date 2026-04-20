@@ -13,8 +13,8 @@
 | Unit | File | Status | PR |
 |---|---|---|---|
 | U0.9 | [../../prereqs/u0-9-notification-table.md](../../prereqs/u0-9-notification-table.md) | done-on-branch | — |
-| U4.1 | [u4-1-save-follow.md](./u4-1-save-follow.md) | in-progress | — |
-| U4.2 | [u4-2-saved-follows-pages.md](./u4-2-saved-follows-pages.md) | not-started | — |
+| U4.1 | [u4-1-save-follow.md](./u4-1-save-follow.md) | done-on-branch | — |
+| U4.2 | [u4-2-saved-follows-pages.md](./u4-2-saved-follows-pages.md) | in-progress | — |
 | U4.3 | [u4-3-notes-data.md](./u4-3-notes-data.md) | not-started | — |
 | U4.4 | [u4-4-tiptap-editor.md](./u4-4-tiptap-editor.md) | not-started | — |
 | U4.5 | [u4-5-notes-workspace.md](./u4-5-notes-workspace.md) | not-started | — |
