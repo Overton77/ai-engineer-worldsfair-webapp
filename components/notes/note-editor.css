@@ -1,0 +1,124 @@
+/* Tiptap NoteEditor — visual styles for the editing surface itself.
+   Co-located with the component so any layout shell (drawer, split,
+   workspace) gets the same look. */
+
+.note-editor [contenteditable] {
+  outline: none;
+}
+
+.note-editor .ProseMirror {
+  min-height: 200px;
+  padding: 1rem 1.25rem;
+  color: var(--color-foreground);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  caret-color: var(--color-primary);
+}
+
+.note-editor .ProseMirror > * + * {
+  margin-top: 0.6em;
+}
+
+.note-editor h1 {
+  font-size: 1.6rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+.note-editor h2 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+}
+.note-editor h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.note-editor ul,
+.note-editor ol {
+  padding-left: 1.4em;
+}
+.note-editor ul {
+  list-style: disc;
+}
+.note-editor ol {
+  list-style: decimal;
+}
+
+.note-editor blockquote {
+  border-inline-start: 3px solid color-mix(in oklab, var(--color-border) 80%, transparent);
+  padding-inline-start: 1em;
+  color: color-mix(in oklab, var(--color-muted-foreground) 90%, transparent);
+}
+
+.note-editor pre {
+  background: var(--color-muted);
+  color: var(--color-foreground);
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.85rem;
+  overflow-x: auto;
+}
+
+.note-editor code {
+  background: color-mix(in oklab, var(--color-muted) 80%, transparent);
+  border-radius: 0.25rem;
+  padding: 0.05em 0.3em;
+  font-size: 0.85em;
+}
+
+.note-editor pre code {
+  background: transparent;
+  padding: 0;
+}
+
+/* Task lists */
+.note-editor ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+}
+.note-editor ul[data-type="taskList"] li {
+  display: flex;
+  gap: 0.55rem;
+  align-items: flex-start;
+}
+.note-editor ul[data-type="taskList"] li > label {
+  flex: 0 0 auto;
+  user-select: none;
+  margin-top: 0.2em;
+}
+.note-editor ul[data-type="taskList"] li > div {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Mention chips */
+.note-editor .entity-mention,
+.note-editor .timestamp-mention {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--color-primary) 12%, transparent);
+  color: var(--color-primary);
+  font-size: 0.85em;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+}
+.note-editor .entity-mention:hover,
+.note-editor .timestamp-mention:hover {
+  background: color-mix(in oklab, var(--color-primary) 22%, transparent);
+}
+
+/* Placeholder */
+.note-editor .ProseMirror p.is-editor-empty:first-child::before {
+  color: color-mix(in oklab, var(--color-muted-foreground) 80%, transparent);
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
