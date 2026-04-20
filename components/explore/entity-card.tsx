@@ -158,7 +158,6 @@ export function EntityCard({
         {snippet ? (
           <p
             className="text-muted-foreground mt-2 line-clamp-2 text-sm"
-            // eslint-disable-next-line react/no-danger
             dangerouslySetInnerHTML={{ __html: sanitizeSnippet(snippet) }}
           />
         ) : entity.description ? (
