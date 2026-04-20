@@ -5,18 +5,19 @@
 > Canonical sequencing + gate: [`../../05-milestones.md#m2--exploration-v1`](../../05-milestones.md)
 
 - **Branch:** `m2-exploration-v1` (one PR for the whole milestone — see [`git-branch-workflow.mdc`](../../../rules/git-branch-workflow.mdc))
-- **Status:** done-on-branch
-- **PR:** —
+- **Status:** merged
+- **Merge commit:** `f1efd2b`
+- **PR:** — (merged locally; not pushed per repo rule)
 
 ## Units
 
 | Unit | File | Status | Commit |
 |---|---|---|---|
-| U3.1 | [u3-1-cmd-k.md](./u3-1-cmd-k.md) | done-on-branch | `c0e7858` |
-| U3.2 | [u3-2-search-page.md](./u3-2-search-page.md) | done-on-branch | `ea58460` |
-| U3.3 | [u3-3-explore-index.md](./u3-3-explore-index.md) | done-on-branch | `71a2923` |
-| U3.4 | [u3-4-dossiers-mvp.md](./u3-4-dossiers-mvp.md) | done-on-branch | `c2e4e37` |
-| U3.5 | [u3-5-dossiers-secondary.md](./u3-5-dossiers-secondary.md) | done-on-branch | `e2ee7ee` |
+| U3.1 | [u3-1-cmd-k.md](./u3-1-cmd-k.md) | merged via f1efd2b | `c0e7858` |
+| U3.2 | [u3-2-search-page.md](./u3-2-search-page.md) | merged via f1efd2b | `ea58460` |
+| U3.3 | [u3-3-explore-index.md](./u3-3-explore-index.md) | merged via f1efd2b | `71a2923` |
+| U3.4 | [u3-4-dossiers-mvp.md](./u3-4-dossiers-mvp.md) | merged via f1efd2b | `c2e4e37` |
+| U3.5 | [u3-5-dossiers-secondary.md](./u3-5-dossiers-secondary.md) | merged via f1efd2b | `e2ee7ee` |
 
 ### U3.0 prep work (shared scaffolding, not a numbered unit)
 

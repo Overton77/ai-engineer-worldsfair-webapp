@@ -4,7 +4,7 @@
 - **Spec:** [`04-implementation-units.md` § U3.5](../../04-implementation-units.md)
 - **Wireframe:** [`03-wireframes.md` — D. Entity Dossier variants](../../03-wireframes.md)
 - **Commit prefix:** `[U3.5]` (lands on milestone branch [`m2-exploration-v1`](./README.md))
-- **Status:** done-on-branch
+- **Status:** merged via f1efd2b
 - **PR:** —
 - **Depends on:** U3.4
 

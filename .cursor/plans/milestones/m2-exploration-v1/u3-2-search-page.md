@@ -4,7 +4,7 @@
 - **Spec:** [`04-implementation-units.md` § U3.2](../../04-implementation-units.md)
 - **Wireframe:** [`03-wireframes.md` — E. Search Page](../../03-wireframes.md)
 - **Commit prefix:** `[U3.2]` (lands on milestone branch [`m2-exploration-v1`](./README.md))
-- **Status:** done-on-branch
+- **Status:** merged via f1efd2b
 - **PR:** —
 - **Depends on:** U3.1, U1.5
 
