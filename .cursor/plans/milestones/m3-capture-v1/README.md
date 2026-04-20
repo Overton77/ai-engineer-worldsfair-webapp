@@ -12,12 +12,20 @@
 
 | Unit | File | Status | PR |
 |---|---|---|---|
+| U0.9 | [../../prereqs/u0-9-notification-table.md](../../prereqs/u0-9-notification-table.md) | in-progress | — |
 | U4.1 | [u4-1-save-follow.md](./u4-1-save-follow.md) | not-started | — |
 | U4.2 | [u4-2-saved-follows-pages.md](./u4-2-saved-follows-pages.md) | not-started | — |
 | U4.3 | [u4-3-notes-data.md](./u4-3-notes-data.md) | not-started | — |
 | U4.4 | [u4-4-tiptap-editor.md](./u4-4-tiptap-editor.md) | not-started | — |
 | U4.5 | [u4-5-notes-workspace.md](./u4-5-notes-workspace.md) | not-started | — |
 | U4.6 | [u4-6-entity-pinned-notes.md](./u4-6-entity-pinned-notes.md) | not-started | — |
+| U4.7 | [u4-7-watch-notes.md](./u4-7-watch-notes.md) | not-started | — |
+
+> **U0.9 is folded into this branch** (per build-plan decision 2026-04-20).
+> The notification table + bell badge ship as the first commit group on
+> `m3-capture-v1` so U4.1 can fire `follow_created` notifications from
+> day one. The U0.9 unit file lives under `prereqs/` for canonical
+> tracking but its commits land here.
 
 ## Gate to M4
 
