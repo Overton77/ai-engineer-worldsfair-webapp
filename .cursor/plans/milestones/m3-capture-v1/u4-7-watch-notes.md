@@ -3,7 +3,7 @@
 - **Milestone:** [M3 — Capture v1](./README.md)
 - **Spec:** net-new unit (born from [`03a-notes-rethink-wireframes.md` § N3](../../03a-notes-rethink-wireframes.md))
 - **Commit prefix:** `[U4.7]` (lands on milestone branch [`m3-capture-v1`](./README.md))
-- **Status:** not-started
+- **Status:** done-on-branch
 - **PR:** —
 - **Depends on:** U4.4 (`timestampMention` node), U4.5 (`NotesSplitShell` + URL contract)
 
@@ -60,3 +60,4 @@ seek the player on click.
 ## Working log
 
 - _2026-04-20_ — unit file created from build-plan step 8.
+- _2026-04-20_ — `components/notes/video-notes-shell.tsx` ships split / theatre / focus / off layouts with localStorage persistence (`useNotesLayout("youtube_video")`). Owns the player + `?t=` URL state + `window.__videoNotesCtx__` so the editor's ⌘⇧K shortcut and timestamp chips can both seek the player. Right pane is shadcn `Tabs` with **Notes** (`<EntityNotesPanel videoCtx>`) and **Chapters** (with per-row `[📝]` that creates a chapter-titled note via `createNoteAction`). Click-to-seek works through a delegated document-level handler on `[data-mention-type="timestamp"]` chips so it survives editor remounts. First-visit nudge banner above the player when `layout === 'off'`. Old `_video-shell.tsx` deleted; the page mounts `<VideoNotesShell>` directly. 2 vitest cases verify the click-to-seek contract.

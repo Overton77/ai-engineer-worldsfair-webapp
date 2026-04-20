@@ -23,6 +23,8 @@ type VideoPlayerProps = {
  */
 export type VideoPlayerHandle = {
   seekTo: (seconds: number) => void;
+  /** Returns the current playback position in seconds, or 0 when not loaded. */
+  getCurrentTime: () => number;
 };
 
 declare global {
@@ -40,6 +42,7 @@ declare global {
 type YTPlayerInstance = {
   seekTo: (seconds: number, allowSeekAhead: boolean) => void;
   playVideo: () => void;
+  getCurrentTime: () => number;
   destroy: () => void;
 };
 
@@ -93,6 +96,13 @@ export const VideoPlayer = React.forwardRef<VideoPlayerHandle, VideoPlayerProps>
           }
           playerRef.current?.seekTo(seconds, true);
           playerRef.current?.playVideo();
+        },
+        getCurrentTime: () => {
+          try {
+            return playerRef.current?.getCurrentTime() ?? 0;
+          } catch {
+            return 0;
+          }
         },
       }),
       [active],

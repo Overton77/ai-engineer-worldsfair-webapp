@@ -19,7 +19,7 @@
 | U4.4 | [u4-4-tiptap-editor.md](./u4-4-tiptap-editor.md) | done-on-branch | — |
 | U4.5 | [u4-5-notes-workspace.md](./u4-5-notes-workspace.md) | done-on-branch | — |
 | U4.6 | [u4-6-entity-pinned-notes.md](./u4-6-entity-pinned-notes.md) | done-on-branch | — |
-| U4.7 | [u4-7-watch-notes.md](./u4-7-watch-notes.md) | in-progress | — |
+| U4.7 | [u4-7-watch-notes.md](./u4-7-watch-notes.md) | done-on-branch | — |
 
 > **U0.9 is folded into this branch** (per build-plan decision 2026-04-20).
 > The notification table + bell badge ship as the first commit group on
