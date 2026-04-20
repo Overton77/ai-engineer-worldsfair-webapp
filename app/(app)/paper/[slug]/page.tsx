@@ -2,10 +2,12 @@ import { notFound } from "next/navigation";
 
 import { CorpusSection } from "@/components/dossier/corpus-section";
 import { DossierHero } from "@/components/dossier/dossier-hero";
-import { NotesPlaceholder } from "@/components/dossier/notes-placeholder";
+import { EntityNotesFooter } from "@/components/dossier/notes-placeholder";
 import { RelationshipSection } from "@/components/dossier/relationship-section";
+import { NotesSplitShell } from "@/components/notes/notes-split-shell";
 import { Separator } from "@/components/ui/separator";
 import { getPaperDossier } from "@/lib/db/dossier";
+import { getDossierNotesContext } from "@/lib/db/dossier-notes";
 import { getSaveFollowState } from "@/lib/db/save-follow-state";
 import { refKey } from "@/lib/db/saves";
 import { ENTITY_HREF } from "@/types/domain";
@@ -28,7 +30,10 @@ export default async function PaperDossierPage({ params }: PaperPageProps) {
 
   const { paper } = dossier;
   const entityRef = { kind: "paper" as const, id: paper.slug };
-  const ssState = await getSaveFollowState([entityRef]);
+  const [ssState, notesCtx] = await Promise.all([
+    getSaveFollowState([entityRef]),
+    getDossierNotesContext(entityRef),
+  ]);
   const k = refKey(entityRef);
   const links = [
     paper.url ? { label: "Web", href: paper.url } : null,
@@ -40,6 +45,10 @@ export default async function PaperDossierPage({ params }: PaperPageProps) {
   ].filter((l): l is { label: string; href: string } => l !== null);
 
   return (
+    <NotesSplitShell
+      entityRef={{ ...entityRef, title: paper.title }}
+      className="mx-auto max-w-7xl"
+    >
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
       <DossierHero
         kind="paper"
@@ -47,6 +56,8 @@ export default async function PaperDossierPage({ params }: PaperPageProps) {
         href={ENTITY_HREF.paper(paper.slug)}
         initialSaved={ssState.saved.has(k)}
         initialFollowing={ssState.following.has(k)}
+        notesCount={notesCtx.count}
+        supportsSplit
         title={paper.title}
         subtitle={paper.venue}
         description={paper.abstract}
@@ -94,9 +105,13 @@ export default async function PaperDossierPage({ params }: PaperPageProps) {
       </Section>
 
       <Section title="Notes">
-        <NotesPlaceholder />
+        <EntityNotesFooter
+          entity={{ kind: "paper", id: paper.slug, title: paper.title }}
+          notes={notesCtx.notes}
+        />
       </Section>
     </div>
+    </NotesSplitShell>
   );
 }
 

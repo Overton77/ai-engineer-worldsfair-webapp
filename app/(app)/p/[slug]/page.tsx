@@ -2,10 +2,12 @@ import { notFound } from "next/navigation";
 
 import { CorpusSection } from "@/components/dossier/corpus-section";
 import { DossierHero } from "@/components/dossier/dossier-hero";
-import { NotesPlaceholder } from "@/components/dossier/notes-placeholder";
+import { EntityNotesFooter } from "@/components/dossier/notes-placeholder";
 import { RelationshipSection } from "@/components/dossier/relationship-section";
+import { NotesSplitShell } from "@/components/notes/notes-split-shell";
 import { Separator } from "@/components/ui/separator";
 import { getPersonDossier } from "@/lib/db/dossier";
+import { getDossierNotesContext } from "@/lib/db/dossier-notes";
 import { getSaveFollowState } from "@/lib/db/save-follow-state";
 import { refKey } from "@/lib/db/saves";
 import { ENTITY_HREF } from "@/types/domain";
@@ -28,8 +30,12 @@ export default async function PersonDossierPage({ params }: PersonPageProps) {
 
   const { person } = dossier;
   const entityRef = { kind: "person" as const, id: person.person_id };
-  const ssState = await getSaveFollowState([entityRef]);
+  const [ssState, notesCtx] = await Promise.all([
+    getSaveFollowState([entityRef]),
+    getDossierNotesContext(entityRef),
+  ]);
   const k = refKey(entityRef);
+  const entityTitle = person.full_name ?? person.slug;
   const links = [
     person.github_username
       ? {
@@ -52,6 +58,10 @@ export default async function PersonDossierPage({ params }: PersonPageProps) {
   ].filter((l): l is { label: string; href: string } => l !== null);
 
   return (
+    <NotesSplitShell
+      entityRef={{ ...entityRef, title: entityTitle }}
+      className="mx-auto max-w-7xl"
+    >
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
       <DossierHero
         kind="person"
@@ -59,6 +69,8 @@ export default async function PersonDossierPage({ params }: PersonPageProps) {
         href={ENTITY_HREF.person(person.slug)}
         initialSaved={ssState.saved.has(k)}
         initialFollowing={ssState.following.has(k)}
+        notesCount={notesCtx.count}
+        supportsSplit
         title={person.full_name ?? person.slug}
         subtitle={person.tag_line ?? person.role_title ?? null}
         description={person.bio ?? person.notable_for ?? null}
@@ -125,9 +137,17 @@ export default async function PersonDossierPage({ params }: PersonPageProps) {
       </Section>
 
       <Section title="Notes">
-        <NotesPlaceholder />
+        <EntityNotesFooter
+          entity={{
+            kind: "person",
+            id: person.person_id,
+            title: entityTitle,
+          }}
+          notes={notesCtx.notes}
+        />
       </Section>
     </div>
+    </NotesSplitShell>
   );
 }
 

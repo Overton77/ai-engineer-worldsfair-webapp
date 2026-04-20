@@ -2,6 +2,7 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
 import { AssistantPlaceholderButton } from "./assistant-placeholder-button";
+import { DossierNotesToggle } from "./notes-toggle";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,10 @@ type DossierHeroProps = {
   notesCount?: number;
   /** Where this entity lives — used as the click-through on follow notifications. */
   href?: string;
+  /** When true, render the [║ Notes] split-toggle next to the action buttons. */
+  supportsSplit?: boolean;
+  /** Default layout for split toggle ("split" or "theatre" for video). */
+  defaultLayout?: "split" | "theatre" | "focus";
 };
 
 function initialsOf(t: string): string {
@@ -63,6 +68,8 @@ export function DossierHero({
   initialFollowing = false,
   notesCount = 0,
   href,
+  supportsSplit = false,
+  defaultLayout = "split",
 }: DossierHeroProps) {
   const visibleMeta = (meta ?? []).filter(
     (m): m is string => typeof m === "string" && m.length > 0,
@@ -166,6 +173,13 @@ export function DossierHero({
             entity={{ kind, id: entityId, title }}
             count={notesCount}
           />
+          {supportsSplit ? (
+            <DossierNotesToggle
+              entityKind={kind}
+              count={notesCount}
+              defaultLayout={defaultLayout}
+            />
+          ) : null}
           <AssistantPlaceholderButton title={title} />
         </div>
       </div>
