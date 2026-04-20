@@ -78,6 +78,7 @@ const KIND_TO_ID_FIELD: Record<EntityKind, keyof AnyEntityRow | "id" | "slug"> =
   challenge: "challenge_id",
   attempt: "attempt_id",
   image: "image_id",
+  notes: "id",
 };
 
 function pickId(kind: EntityKind, row: AnyEntityRow): string {

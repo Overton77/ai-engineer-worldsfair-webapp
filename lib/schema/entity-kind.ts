@@ -35,6 +35,12 @@ export const ENTITY_KINDS = [
   "challenge",
   "attempt",
   "image",
+  // Polymorphic surfaces (search_all, cmd-K) emit `entity_kind='notes'`
+  // for own-note hits. RLS scopes notes to the calling user, so this is
+  // safe to surface in the cross-entity search response. Persistence
+  // tables (saved_items, profile_followed_entity) treat 'notes' as a
+  // soft kind — you don't save or follow a note.
+  "notes",
 ] as const;
 
 export type EntityKind = (typeof ENTITY_KINDS)[number];

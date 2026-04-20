@@ -69,6 +69,27 @@ describe("searchAll", () => {
     expect(out[0].rank).toBeCloseTo(0.81);
   });
 
+  it("preserves notes rows (own-note hits surface in cmd-K)", async () => {
+    const { client } = mockClient({
+      data: [
+        {
+          entity_kind: "notes",
+          entity_id: "11111111-1111-1111-1111-111111111111",
+          slug: "11111111-1111-1111-1111-111111111111",
+          title: "Why GEPA matters",
+          subtitle: "library",
+          snippet: "GEPA pairs <mark>judge</mark> outputs with…",
+          rank: 0.5,
+        },
+      ],
+      error: null,
+    });
+    const out = await searchAll({ query: "gepa" }, client);
+    expect(out).toHaveLength(1);
+    expect(out[0].entity_kind).toBe("notes");
+    expect(out[0].title).toBe("Why GEPA matters");
+  });
+
   it("throws on RPC error", async () => {
     const { client } = mockClient({
       data: null,
