@@ -26,4 +26,4 @@
 ## Working log
 
 - _2026-04-20_ — unit file created.
-- _2026-04-20_ — implemented on `m2-exploration-v1`.
+- _2026-04-20_ — implemented on `m2-exploration-v1` at `e2ee7ee`.

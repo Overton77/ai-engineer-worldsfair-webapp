@@ -29,7 +29,7 @@
 ## Working log
 
 - _2026-04-20_ — unit file created; wireframe C updated with the FTS spec.
-- _2026-04-20_ — implemented on `m2-exploration-v1`.
+- _2026-04-20_ — implemented on `m2-exploration-v1` at `71a2923`.
 
 ## Phase-2 backlog (not part of this unit's gate)
 
