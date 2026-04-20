@@ -16,6 +16,7 @@ export type PaletteHit = {
   id: string;
   slug: string | null;
   title: string;
+  imageUrl: string | null;
   similarity: number;
 };
 
@@ -47,6 +48,7 @@ export async function searchPaletteAction(input: {
     id: r.entity_id,
     slug: r.slug,
     title: r.title,
+    imageUrl: r.image_url ?? null,
     similarity: r.similarity,
   }));
 }

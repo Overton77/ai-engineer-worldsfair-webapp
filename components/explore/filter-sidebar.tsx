@@ -26,7 +26,11 @@ export type FilterValue = {
 type FilterSidebarProps = {
   value: FilterValue;
   onChange: (next: FilterValue) => void;
-  /** Whether the active entity kind has the column for this filter. Disabled groups render greyed-out. */
+  /**
+   * Which filter dimensions the active entity kind supports. Groups
+   * whose flag is false are not rendered at all (vs being greyed out)
+   * so the sidebar reads as "filters that apply here".
+   */
   available?: {
     layers?: boolean;
     categories?: boolean;
@@ -49,6 +53,11 @@ export function FilterSidebar({
 }: FilterSidebarProps) {
   const [tagDraft, setTagDraft] = React.useState("");
 
+  const showLayers = available.layers !== false;
+  const showCategories = available.categories !== false;
+  const showTags = available.tags !== false;
+  const hasAnyGroup = showLayers || showCategories || showTags;
+
   const reset = () =>
     onChange({ layers: [], categories: [], tags: [] });
 
@@ -64,37 +73,41 @@ export function FilterSidebar({
   };
 
   const totalActive =
-    value.layers.length + value.categories.length + value.tags.length;
+    (showLayers ? value.layers.length : 0) +
+    (showCategories ? value.categories.length : 0) +
+    (showTags ? value.tags.length : 0);
 
-  return (
-    <aside
-      className={cn(
-        "border-border/60 bg-background flex flex-col gap-5 rounded-xl border p-4",
-        className,
-      )}
-      aria-label="Refine results"
-    >
-      <header className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold tracking-tight">Filters</h2>
-        {totalActive > 0 ? (
-          <Button size="xs" variant="ghost" onClick={reset}>
-            <RotateCcw className="size-3" />
-            Reset
-          </Button>
-        ) : null}
-      </header>
-
-      {typeof resultCount === "number" ? (
-        <p className="text-muted-foreground -mt-3 text-xs">
-          {resultCount.toLocaleString()} results
-        </p>
-      ) : null}
-
-      <FilterGroup
-        title="Layer"
-        disabled={!available.layers}
-        disabledHint="Layer doesn't apply to this entity kind."
+  if (!hasAnyGroup) {
+    // Nothing to filter by for this entity kind — render a compact
+    // "results count only" rail so the layout stays balanced.
+    return (
+      <aside
+        className={cn(
+          "border-border/60 bg-background flex flex-col gap-2 rounded-xl border p-4",
+          className,
+        )}
+        aria-label="Result count"
       >
+        <h2 className="text-sm font-semibold tracking-tight">Results</h2>
+        {typeof resultCount === "number" ? (
+          <p className="text-muted-foreground text-xs">
+            {resultCount.toLocaleString()} total
+          </p>
+        ) : null}
+        <p className="text-muted-foreground mt-2 text-xs italic">
+          No filters apply to this view.
+        </p>
+      </aside>
+    );
+  }
+
+  let rendered = 0;
+  const groups: React.ReactNode[] = [];
+
+  if (showLayers) {
+    if (rendered++ > 0) groups.push(<Separator key="sep-layer" />);
+    groups.push(
+      <FilterGroup key="layer" title="Layer">
         <div className="flex flex-col gap-1.5">
           {DOMAIN_LAYERS.map((layer) => {
             const meta = DOMAIN_LAYER_META[layer];
@@ -102,15 +115,11 @@ export function FilterSidebar({
             return (
               <label
                 key={layer}
-                className={cn(
-                  "flex cursor-pointer items-center gap-2 text-sm",
-                  !available.layers && "pointer-events-none opacity-50",
-                )}
+                className="flex cursor-pointer items-center gap-2 text-sm"
               >
                 <input
                   type="checkbox"
                   checked={checked}
-                  disabled={!available.layers}
                   onChange={() =>
                     onChange({ ...value, layers: toggle(value.layers, layer) })
                   }
@@ -124,30 +133,25 @@ export function FilterSidebar({
             );
           })}
         </div>
-      </FilterGroup>
+      </FilterGroup>,
+    );
+  }
 
-      <Separator />
-
-      <FilterGroup
-        title="Category"
-        disabled={!available.categories}
-        disabledHint="Category doesn't apply to this entity kind."
-      >
+  if (showCategories) {
+    if (rendered++ > 0) groups.push(<Separator key="sep-cat" />);
+    groups.push(
+      <FilterGroup key="category" title="Category">
         <div className="max-h-72 space-y-1 overflow-y-auto pr-1">
           {CATEGORY_KEYS.map((cat) => {
             const checked = value.categories.includes(cat);
             return (
               <label
                 key={cat}
-                className={cn(
-                  "flex cursor-pointer items-center gap-2 text-sm",
-                  !available.categories && "pointer-events-none opacity-50",
-                )}
+                className="flex cursor-pointer items-center gap-2 text-sm"
               >
                 <input
                   type="checkbox"
                   checked={checked}
-                  disabled={!available.categories}
                   onChange={() =>
                     onChange({
                       ...value,
@@ -161,15 +165,14 @@ export function FilterSidebar({
             );
           })}
         </div>
-      </FilterGroup>
+      </FilterGroup>,
+    );
+  }
 
-      <Separator />
-
-      <FilterGroup
-        title="Tags"
-        disabled={!available.tags}
-        disabledHint="Tag filter doesn't apply to this entity kind."
-      >
+  if (showTags) {
+    if (rendered++ > 0) groups.push(<Separator key="sep-tags" />);
+    groups.push(
+      <FilterGroup key="tags" title="Tags">
         <div className="flex flex-col gap-2">
           {value.tags.length > 0 ? (
             <div className="flex flex-wrap gap-1">
@@ -198,7 +201,6 @@ export function FilterSidebar({
               value={tagDraft}
               onChange={(e) => setTagDraft(e.target.value)}
               placeholder="add tag…"
-              disabled={!available.tags}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
@@ -212,14 +214,42 @@ export function FilterSidebar({
               size="icon-sm"
               variant="outline"
               onClick={addTag}
-              disabled={!available.tags || !tagDraft.trim()}
+              disabled={!tagDraft.trim()}
               aria-label="Add tag"
             >
               <Plus className="size-3" />
             </Button>
           </div>
         </div>
-      </FilterGroup>
+      </FilterGroup>,
+    );
+  }
+
+  return (
+    <aside
+      className={cn(
+        "border-border/60 bg-background flex flex-col gap-5 rounded-xl border p-4",
+        className,
+      )}
+      aria-label="Refine results"
+    >
+      <header className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold tracking-tight">Filters</h2>
+        {totalActive > 0 ? (
+          <Button size="xs" variant="ghost" onClick={reset}>
+            <RotateCcw className="size-3" />
+            Reset
+          </Button>
+        ) : null}
+      </header>
+
+      {typeof resultCount === "number" ? (
+        <p className="text-muted-foreground -mt-3 text-xs">
+          {resultCount.toLocaleString()} results
+        </p>
+      ) : null}
+
+      {groups}
     </aside>
   );
 }
@@ -227,13 +257,9 @@ export function FilterSidebar({
 function FilterGroup({
   title,
   children,
-  disabled,
-  disabledHint,
 }: {
   title: string;
   children: React.ReactNode;
-  disabled?: boolean;
-  disabledHint?: string;
 }) {
   return (
     <section className="flex flex-col gap-2">
@@ -241,11 +267,6 @@ function FilterGroup({
         {title}
       </h3>
       {children}
-      {disabled && disabledHint ? (
-        <p className="text-muted-foreground text-[10px] italic">
-          {disabledHint}
-        </p>
-      ) : null}
     </section>
   );
 }

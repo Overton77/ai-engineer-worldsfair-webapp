@@ -14,6 +14,7 @@ export const SearchAllRowSchema = z.object({
   slug: z.string().nullable(),
   title: z.string(),
   subtitle: z.string().nullable(),
+  image_url: z.string().nullable().optional(),
   snippet: z.string().nullable(),
   rank: z.number(),
 });
@@ -25,6 +26,7 @@ export const SearchFuzzyRowSchema = z.object({
   entity_id: z.string(),
   slug: z.string().nullable(),
   title: z.string(),
+  image_url: z.string().nullable().optional(),
   similarity: z.number(),
 });
 

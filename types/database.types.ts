@@ -3190,6 +3190,7 @@ export type Database = {
         Returns: {
           entity_id: string
           entity_kind: string
+          image_url: string
           rank: number
           slug: string
           snippet: string
@@ -3202,6 +3203,7 @@ export type Database = {
         Returns: {
           entity_id: string
           entity_kind: string
+          image_url: string
           similarity: number
           slug: string
           title: string

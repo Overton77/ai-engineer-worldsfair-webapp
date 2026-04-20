@@ -177,10 +177,10 @@ export function SearchShell({
           />
           <span className="text-muted-foreground text-xs">
             {params.mode === "lexical"
-              ? "Postgres FTS via search_all (per-table tsvector + ts_rank_cd)."
+              ? "Find people, libraries, papers, talks, and more by name."
               : params.mode === "semantic"
-                ? "Pure pgvector similarity over 1536-d chunk embeddings."
-                : "RRF fusion of FTS + semantic over the chunk store."}
+                ? "Find passages from talks, papers, and modules that match the idea."
+                : "Find anything across the corpus — names and ideas combined."}
           </span>
         </div>
       </header>
@@ -248,11 +248,10 @@ function LexicalView({
             title: r.title,
             subtitle: r.subtitle,
             description: null,
-            imageUrl: null,
+            imageUrl: r.image_url ?? null,
             href: ENTITY_HREF[r.entity_kind](r.slug ?? r.entity_id),
           },
           snippet: r.snippet,
-          scoreBadge: `lex ${r.rank.toFixed(2)}`,
         }))}
         total={filtered.length}
         loading={loading}
@@ -266,7 +265,6 @@ function LexicalView({
 function ChunkView({
   rows,
   loading,
-  mode,
 }: {
   rows: ChunkHit[];
   loading: boolean;
@@ -285,10 +283,9 @@ function ChunkView({
   if (rows.length === 0) {
     return (
       <div className="border-border/60 bg-muted/30 flex flex-col items-center gap-2 rounded-xl border p-12 text-center">
-        <p className="text-base font-medium">No chunks matched</p>
+        <p className="text-base font-medium">No passages matched</p>
         <p className="text-muted-foreground text-sm">
-          Switch to Lexical mode for an entity-only search, or refine your
-          query.
+          Try the &ldquo;By name&rdquo; mode or refine your query.
         </p>
       </div>
     );
@@ -296,8 +293,7 @@ function ChunkView({
   return (
     <div className="flex flex-col gap-6">
       <p className="text-muted-foreground text-xs">
-        {rows.length} chunks · {groups.length} sources · sorted by RRF score
-        ({mode === "semantic" ? "semantic only" : "FTS + semantic"})
+        {rows.length} passages from {groups.length} sources
       </p>
       {groups.map((g) => (
         <ChunkGroupCard key={g.key} group={g} />
@@ -345,15 +341,9 @@ function ChunkGroupCard({ group }: { group: ChunkGroup }) {
           className="hover:underline focus-visible:outline-none focus-visible:underline"
         >
           <span className="text-foreground text-sm font-medium">
-            {target.label}
-          </span>
-          <span className="text-muted-foreground ml-1 text-xs">
-            {target.kindLabel} · {group.sourceId}
+            {target.kindLabel}
           </span>
         </a>
-        <span className="text-muted-foreground text-[10px] font-mono tabular-nums">
-          rrf {group.topScore.toFixed(3)}
-        </span>
       </header>
       <ul className="flex flex-col gap-2">
         {group.hits.slice(0, 3).map((hit) => (
@@ -364,15 +354,12 @@ function ChunkGroupCard({ group }: { group: ChunkGroup }) {
             <p className="text-foreground/90 line-clamp-3 text-sm leading-snug">
               {hit.content}
             </p>
-            <p className="text-muted-foreground mt-1 text-[10px] font-mono">
-              {hit.sourceKind} · ord {hit.ord} · rrf {hit.rrfScore.toFixed(3)}
-            </p>
           </li>
         ))}
       </ul>
       {group.hits.length > 3 ? (
         <p className="text-muted-foreground text-[11px]">
-          +{group.hits.length - 3} more chunks from this source
+          +{group.hits.length - 3} more passages from this source
         </p>
       ) : null}
     </article>
@@ -517,11 +504,10 @@ function KindTabs({
 function EmptyHint() {
   return (
     <div className="border-border/60 bg-muted/30 flex flex-col items-center gap-3 rounded-xl border p-12 text-center">
-      <p className="text-base font-medium">Search across the entire corpus</p>
+      <p className="text-base font-medium">Search the AI engineering corpus</p>
       <p className="text-muted-foreground max-w-md text-sm">
-        Lexical mode runs Postgres FTS across every entity table.
-        <br />
-        Semantic and Hybrid modes search 1536-dim chunk embeddings via RRF.
+        Find people, libraries, papers, talks, videos, and the passages
+        inside them.
       </p>
       <p className="text-muted-foreground text-xs">
         Try{" "}
