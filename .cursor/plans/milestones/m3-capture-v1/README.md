@@ -15,8 +15,8 @@
 | U0.9 | [../../prereqs/u0-9-notification-table.md](../../prereqs/u0-9-notification-table.md) | done-on-branch | — |
 | U4.1 | [u4-1-save-follow.md](./u4-1-save-follow.md) | done-on-branch | — |
 | U4.2 | [u4-2-saved-follows-pages.md](./u4-2-saved-follows-pages.md) | done-on-branch | — |
-| U4.3 | [u4-3-notes-data.md](./u4-3-notes-data.md) | in-progress | — |
-| U4.4 | [u4-4-tiptap-editor.md](./u4-4-tiptap-editor.md) | not-started | — |
+| U4.3 | [u4-3-notes-data.md](./u4-3-notes-data.md) | done-on-branch | — |
+| U4.4 | [u4-4-tiptap-editor.md](./u4-4-tiptap-editor.md) | in-progress | — |
 | U4.5 | [u4-5-notes-workspace.md](./u4-5-notes-workspace.md) | not-started | — |
 | U4.6 | [u4-6-entity-pinned-notes.md](./u4-6-entity-pinned-notes.md) | not-started | — |
 | U4.7 | [u4-7-watch-notes.md](./u4-7-watch-notes.md) | not-started | — |
