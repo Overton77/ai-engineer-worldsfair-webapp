@@ -1,28 +1,44 @@
-"use client";
+import Link from "next/link";
 
-import { Bell } from "lucide-react";
-import { toast } from "sonner";
+import { getOptionalUser } from "@/lib/auth/require-user";
+import { listRecent, listUnreadCount } from "@/lib/db/notifications";
 
-import { Button } from "@/components/ui/button";
+import { NotificationsBellClient } from "./notifications-bell.client";
 
 /**
- * Bell badge placeholder. The `notification` table + real unread count
- * ship with U0.9 + the rest of M3 Capture; here we keep the affordance.
+ * Server component: fetches the unread count + a small page of recent
+ * notifications for the dropdown. The client child handles open/close
+ * state, mark-read calls, and the visual badge.
  */
-export function NotificationsBell() {
+export async function NotificationsBell() {
+  const user = await getOptionalUser();
+  if (!user) {
+    return (
+      <Link
+        href="/login"
+        aria-label="Sign in for notifications"
+        className="text-muted-foreground hover:text-foreground inline-flex size-7 items-center justify-center rounded-md"
+      />
+    );
+  }
+
+  const [unread, recent] = await Promise.all([
+    listUnreadCount(user.id),
+    listRecent(user.id, 12),
+  ]);
+
   return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon-sm"
-      aria-label="Notifications"
-      onClick={() =>
-        toast.message("Notifications", {
-          description: "Follow-news alerts arrive in M3.",
-        })
-      }
-    >
-      <Bell className="size-4" />
-    </Button>
+    <NotificationsBellClient
+      unreadCount={unread}
+      items={recent.map((n) => ({
+        id: n.id,
+        kind: n.kind,
+        title: n.title,
+        body: n.body,
+        url: n.url,
+        readAt: n.read_at,
+        createdAt: n.created_at,
+      }))}
+    />
   );
 }

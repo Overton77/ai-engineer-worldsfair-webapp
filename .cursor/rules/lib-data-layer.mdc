@@ -1,0 +1,71 @@
+---
+description: Subfolders and key modules under lib/ — Supabase, db, search, schema, auth, env, analytics, retrieval, tests.
+globs: aiengineerapp/lib/**/*
+alwaysApply: false
+---
+
+# `lib/` data and logic
+
+Use when editing `aiengineerapp/lib/`. Imports use `@/lib/...` (see **project-architecture**).
+
+## Supabase (`lib/supabase/`)
+
+| File | Role |
+|------|------|
+| `server.ts` | `createServerSupabase()` — RSC, Server Actions, route handlers; reads/writes session cookies. Typed with `Database`. |
+| `browser.ts` | Client-side `createBrowserClient` for interactive components. |
+| `admin.ts` | Service-role client — **server-only**, bypasses RLS; migrations/admin tasks only. |
+| `env.ts` | URL + anon key resolution (supports publishable-key env names). |
+| `middleware.ts` | `refreshSession`, `copyCookies` — used by **`proxy.ts`**. |
+
+## Data access (`lib/db/`)
+
+| File | Role |
+|------|------|
+| `entities.ts` | Entity rows / lookups by kind. |
+| `dossier.ts` | Full dossier payload for entity detail pages. |
+| `entity-summary.ts` | Map DB rows → `EntitySummary` for cards and lists. |
+| `profile.ts` | Shell profile (display name, avatar, email) for layout. |
+| `stats.ts` | XP / streak and related stats for shell. |
+
+## Search & explore (`lib/search/`)
+
+| File | Role |
+|------|------|
+| `searchAll.ts` | `search_all` RPC wrapper and result typing. |
+| `searchFuzzy.ts` | Trigram / fuzzy search path. |
+| `explore.ts` | Explore listing + RPCs for `/explore/[type]`. |
+| `explore-shared.ts` | Shared parsing, cursors, filters between explore surfaces. |
+| `matchChunks.ts` | Vector / chunk matching helpers (ties to `retrieval`). |
+| `types.ts` | Search/explore TypeScript types. |
+
+## Schema (`lib/schema/`)
+
+- **`entity-kind.ts`** — `ENTITY_KINDS`, `FOLLOW_ENTITY_KINDS`, Zod enums — **must stay aligned** with Postgres `CHECK` constraints and polymorphic columns (see file header + migrations).
+- **`taxonomy.ts`** — `DomainLayer`, category keys (26-key taxonomy), used in filters and cards.
+
+## Auth (`lib/auth/`)
+
+- **`require-user.ts`** — Server-side session gate; throws/redirects when unauthenticated.
+- **`roles.ts`** — `isAdmin()` reads `profiles.is_admin` (per-request cache); `assertAdmin()` for admin-only server actions (pairs with RLS on curriculum tables).
+
+## Server action helpers (`lib/actions/`)
+
+- **`profile-schema.ts`** / **`profile.ts`** — Zod schemas and update helpers for profile settings (shared with `app/(app)/settings`).
+
+## Retrieval / RAG (`lib/retrieval/`)
+
+Embeddings (`embedder.ts`), **`search.ts`** hybrid retrieval, **`filters.ts`** for search params — used by Ask / assistant flows. Exports chunk types from **`types.ts`**.
+
+## Other
+
+| Path | Purpose |
+|------|---------|
+| `recommender/tag-synonyms.ts` | Tag normalization for recommender surfaces. |
+| `analytics/index.ts` | **`track` / `identify` / `reset`** — PostHog shim; no-ops until `NEXT_PUBLIC_POSTHOG_KEY` is set (see file comment + U9.1 plans). |
+| `env.ts` | Zod-validated **public + server** env; optional PostHog, Sentry, GitHub OAuth, service role. |
+| `utils.ts` | `cn()` (clsx + tailwind-merge), small helpers. |
+
+## Tests
+
+Colocated **`*.test.ts`**; run **`pnpm test`** / **`pnpm test:watch`**. Vitest config stubs server-only imports where needed.

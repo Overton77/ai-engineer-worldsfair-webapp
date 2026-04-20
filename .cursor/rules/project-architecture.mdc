@@ -1,0 +1,70 @@
+---
+description: Repo layout for aiengineerapp (Next.js) and root supabase/; route groups, components, types, auth edge, imports, providers, scripts, plans.
+alwaysApply: true
+---
+
+# Project architecture
+
+**Workspace:** `aiengineerapp/` is the Next.js 16 app (pnpm). **`supabase/`** at the **repo root** is the Supabase CLI project. `package.json` scripts named `db:*` use `--workdir ..` so they target that folder.
+
+**Imports:** `tsconfig.json` maps `@/*` → `./*` (project root). Prefer `@/app/...`, `@/components/...`, `@/lib/...`, `@/types/...`.
+
+## `app/` (App Router)
+
+| Area | Role |
+|------|------|
+| `(app)/` | Authenticated shell (`(app)/layout.tsx`): left rail, top bar, cmd-K. Product: home, learn, courses, challenges, explore, search, saved, follows, notes, ask, settings. |
+| `(app)/*/[*]` | Entity **dossiers** where `page.tsx` exists — `/p/[slug]`, `/o/[slug]`, `/talk/[slug]`, `/video/[id]`, `/lib/[slug]`, `/paper/[slug]`, `/event/[slug]`. |
+| `(auth)/` | Login (`login-form.tsx`, `actions.ts`), `/auth/callback`, `/logout`. |
+| `(onboarding)/` | `/onboarding/[step]` — wizard driven by `onboarding/steps.ts` + `actions.ts`; step UIs under `_steps/`. |
+| `(marketing)/` | Public `/welcome`. |
+| `app/actions/` | Cross-cutting **Server Actions**: `search.ts`, `explore.ts`, `palette.ts` (cmd-K / command palette). |
+| Root `layout.tsx` | Geist fonts, **`ThemeProvider`** (`next-themes`), **`NuqsAdapter`** (URL query state), **`Toaster`** (`sonner`), metadata. |
+| `globals.css` | Tailwind v4 / design tokens. |
+
+**Colocation:** Heavy client UI for a route often lives in a same-folder **`_*-shell.tsx`** (e.g. `_search-shell.tsx`, `_explore-shell.tsx`, `_video-shell.tsx`). Settings forms may sit next to `page.tsx` (e.g. `profile-settings-form.tsx`).
+
+**URLs vs schema:** `types/domain.ts` → **`ENTITY_HREF`** lists canonical paths for every `EntityKind` (including future surfaces like `/product`, `/repo`). Not all of those routes have a `page.tsx` yet — add a route when you ship that dossier.
+
+**Edge:** `aiengineerapp/proxy.ts` is the Next 16 **Proxy** (session refresh + auth/onboarding redirects). Shared logic: `lib/supabase/middleware.ts`. **RLS** on Supabase + `requireUser()` in server code are the real security boundary; the proxy is UX gating.
+
+## `components/`
+
+| Folder | Role |
+|--------|------|
+| `ui/` | Primitives from **shadcn** / Radix (`components.json`) — button, dialog, tabs, command, avatar, … |
+| `shell/` | App chrome: rails, top bar, mobile nav, theme, user menu, notifications, assistant toggle, XP/streak, `command-trigger` for cmd-K. |
+| `explore/` | Explore/search: filters, entity cards, result lists, match mode toggle. |
+| `dossier/` | Entity detail: hero, tabs, corpus, relationships, video player, notes placeholder. |
+| `command-palette/` | Cmd-K palette, React context, recent searches. |
+| `wizard/` | Onboarding: chip picker, layer cards, progress dots. |
+| `settings/` | Reusable settings widgets (e.g. avatar upload). |
+| `brand/` | Logo. Root `theme-provider.tsx` wraps `next-themes`. |
+
+Keep route `page.tsx` files thin: load data in RSC or call server actions; compose from `components/`.
+
+## `types/`
+
+- **`database.types.ts`** — Generated **`Database`** type for Supabase clients. **Do not edit by hand.** Regenerate: `pnpm db:types` (linked remote project) or `pnpm db:types:local` after DDL changes.
+- **`domain.ts`** — App types: `EntitySummary`, `FilterState`, `SearchAllHit`, `ENTITY_HREF`, re-exports from `lib/schema/entity-kind`.
+
+## `scripts/` (maintenance, not the App Router)
+
+One-off **Node/tsx** utilities: entity upserts, backfills, embedding pipelines, SQL helpers. **`tsconfig.json` excludes `scripts/**`** from the main typecheck — run with `tsx` / package scripts as needed. Heavier backfills belong here per **supabase-migrations** guidance.
+
+## `.cursor/plans/`
+
+Milestone and unit stubs (M0–M8, prereqs), wireframes — **product source of truth** for what is planned vs shipped.
+
+## Root `supabase/`
+
+- **`migrations/`**, **`seed.sql`**, **`config.toml`** — local stack and schema history. Workflow: rule **supabase-migrations**.
+
+## Quality / tooling
+
+- **`pnpm typecheck`** — `tsc --noEmit` (app + `lib` + `types`; not `scripts/`).
+- **`pnpm test`** — Vitest; `vitest.server-only-stub.ts` mocks server-only modules in tests.
+
+## Stack (see `package.json`)
+
+React 19, Next 16, Tailwind 4, Supabase SSR, TanStack Query, **nuqs**, TipTap, Vercel AI SDK / `@ai-sdk/openai`, **framer-motion**, Zod, Vitest.
