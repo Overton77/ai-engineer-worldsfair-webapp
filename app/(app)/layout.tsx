@@ -1,5 +1,6 @@
 import { CommandPalette } from "@/components/command-palette/command-palette";
 import { CommandPaletteProvider } from "@/components/command-palette/command-palette-context";
+import { NotesQuickDrawer } from "@/components/notes/notes-quick-drawer";
 import { LeftRail } from "@/components/shell/left-rail";
 import { MobileNav } from "@/components/shell/mobile-nav";
 import { TopBar } from "@/components/shell/top-bar";
@@ -36,6 +37,7 @@ export default async function AppLayout({
         </div>
         <MobileNav />
         <CommandPalette />
+        <NotesQuickDrawer />
       </div>
     </CommandPaletteProvider>
   );

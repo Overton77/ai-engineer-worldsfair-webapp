@@ -17,8 +17,8 @@
 | U4.2 | [u4-2-saved-follows-pages.md](./u4-2-saved-follows-pages.md) | done-on-branch | — |
 | U4.3 | [u4-3-notes-data.md](./u4-3-notes-data.md) | done-on-branch | — |
 | U4.4 | [u4-4-tiptap-editor.md](./u4-4-tiptap-editor.md) | done-on-branch | — |
-| U4.5 | [u4-5-notes-workspace.md](./u4-5-notes-workspace.md) | in-progress | — |
-| U4.6 | [u4-6-entity-pinned-notes.md](./u4-6-entity-pinned-notes.md) | not-started | — |
+| U4.5 | [u4-5-notes-workspace.md](./u4-5-notes-workspace.md) | done-on-branch | — |
+| U4.6 | [u4-6-entity-pinned-notes.md](./u4-6-entity-pinned-notes.md) | in-progress | — |
 | U4.7 | [u4-7-watch-notes.md](./u4-7-watch-notes.md) | not-started | — |
 
 > **U0.9 is folded into this branch** (per build-plan decision 2026-04-20).
