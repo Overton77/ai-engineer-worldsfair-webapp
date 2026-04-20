@@ -3,6 +3,13 @@
 Textual wireframes for the major screens. Each wireframe lists:
 **Purpose**, **Regions**, **Primary interactions**, **Navigation**, **Data dependencies**.
 
+> **Note (M3 rethink):** the **Notes** sections — the "Notes (3)"
+> tab inside §D and the entire §G **Notes Workspace** — have been
+> superseded by [`03a-notes-rethink-wireframes.md`](./03a-notes-rethink-wireframes.md).
+> That doc introduces three invocable notes surfaces (drawer, split,
+> watch+notes) instead of a single destination workspace. Read 03a
+> first when planning M3 (Capture v1).
+
 Legend:
 - `[Button]` — actionable button
 - `<…>` — dynamic content slot

@@ -24,6 +24,16 @@
 A dogfood user produces ≥ 5 notes and ≥ 10 saves in a session without
 confusion.
 
+## Wireframe rethink (read first)
+
+The notes UX for M3 has been re-imagined in
+[`../../03a-notes-rethink-wireframes.md`](../../03a-notes-rethink-wireframes.md).
+That doc supersedes §D's "Notes" tab and §G's "Notes Workspace" in
+[`../../03-wireframes.md`](../../03-wireframes.md). Read 03a before
+breaking ground on U4.3–U4.6 — it changes the *shape* of U4.5/U4.6
+(invocable surfaces, not destination screens) and proposes a net-new
+**U4.7 Watch+Notes shell** for the video dossier.
+
 ## Decisions that shape this milestone
 
 - **Q4 / Q5** — `EntityKind` union (shipped via migration

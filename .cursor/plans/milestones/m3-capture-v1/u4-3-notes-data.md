@@ -2,6 +2,8 @@
 
 - **Milestone:** [M3 — Capture v1](./README.md)
 - **Spec:** [`04-implementation-units.md` § U4.3](../../04-implementation-units.md)
+- **Wireframe rethink:** [`03a-notes-rethink-wireframes.md` §5.1, §8](../../03a-notes-rethink-wireframes.md)
+  — adds `listNotesForEntity` + `entityMention` / `timestampMention` aware `content_text` derivation
 - **Commit prefix:** `[U4.3]` (lands on milestone branch [`m3-capture-v1`](./README.md))
 - **Status:** not-started
 - **PR:** —
