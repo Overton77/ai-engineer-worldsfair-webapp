@@ -2998,6 +2998,168 @@ export type Database = {
     }
     Functions: {
       current_streak_days: { Args: { p_user_id: string }; Returns: number }
+      explore_libraries: {
+        Args: {
+          categories?: string[]
+          layers?: string[]
+          limit_count?: number
+          offset_count?: number
+          q?: string
+          sort?: string
+          tags?: string[]
+        }
+        Returns: {
+          category: string
+          description: string
+          entity_id: string
+          image_url: string
+          layer: string
+          out_tags: string[]
+          popularity: number
+          rank: number
+          recent_at: string
+          slug: string
+          snippet: string
+          subtitle: string
+          title: string
+          total_count: number
+        }[]
+      }
+      explore_organizations: {
+        Args: {
+          categories?: string[]
+          layers?: string[]
+          limit_count?: number
+          offset_count?: number
+          q?: string
+          sort?: string
+          tags?: string[]
+        }
+        Returns: {
+          category: string
+          description: string
+          entity_id: string
+          image_url: string
+          layer: string
+          out_tags: string[]
+          popularity: number
+          rank: number
+          recent_at: string
+          slug: string
+          snippet: string
+          subtitle: string
+          title: string
+          total_count: number
+        }[]
+      }
+      explore_papers: {
+        Args: {
+          categories?: string[]
+          layers?: string[]
+          limit_count?: number
+          offset_count?: number
+          q?: string
+          sort?: string
+          tags?: string[]
+        }
+        Returns: {
+          category: string
+          description: string
+          entity_id: string
+          image_url: string
+          layer: string
+          out_tags: string[]
+          popularity: number
+          rank: number
+          recent_at: string
+          slug: string
+          snippet: string
+          subtitle: string
+          title: string
+          total_count: number
+        }[]
+      }
+      explore_people: {
+        Args: {
+          categories?: string[]
+          layers?: string[]
+          limit_count?: number
+          offset_count?: number
+          q?: string
+          sort?: string
+          tags?: string[]
+        }
+        Returns: {
+          category: string
+          description: string
+          entity_id: string
+          image_url: string
+          layer: string
+          out_tags: string[]
+          popularity: number
+          rank: number
+          recent_at: string
+          slug: string
+          snippet: string
+          subtitle: string
+          title: string
+          total_count: number
+        }[]
+      }
+      explore_sessions: {
+        Args: {
+          categories?: string[]
+          layers?: string[]
+          limit_count?: number
+          offset_count?: number
+          q?: string
+          sort?: string
+          tags?: string[]
+        }
+        Returns: {
+          category: string
+          description: string
+          entity_id: string
+          image_url: string
+          layer: string
+          out_tags: string[]
+          popularity: number
+          rank: number
+          recent_at: string
+          slug: string
+          snippet: string
+          subtitle: string
+          title: string
+          total_count: number
+        }[]
+      }
+      explore_youtube_videos: {
+        Args: {
+          categories?: string[]
+          layers?: string[]
+          limit_count?: number
+          offset_count?: number
+          q?: string
+          sort?: string
+          tags?: string[]
+        }
+        Returns: {
+          category: string
+          description: string
+          entity_id: string
+          image_url: string
+          layer: string
+          out_tags: string[]
+          popularity: number
+          rank: number
+          recent_at: string
+          slug: string
+          snippet: string
+          subtitle: string
+          title: string
+          total_count: number
+        }[]
+      }
       immutable_array_to_string: {
         Args: { arr: string[]; delim: string }
         Returns: string
