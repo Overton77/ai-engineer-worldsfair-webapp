@@ -29,6 +29,27 @@ describe("toEntitySummary", () => {
     });
   });
 
+  it("uses ai_engineer_url when Sessionize is absent (after Sessionize when both set)", () => {
+    const sessionize = "https://sessionize.com/image/abc.jpg";
+    const aiee = "https://wf2025.ai.engineer/wf25speakers/photo.jpg";
+    const onlyAiee = toEntitySummary("person", {
+      person_id: "p_1",
+      slug: "a",
+      full_name: "A B",
+      ai_engineer_url: aiee,
+    });
+    expect(onlyAiee.imageUrl).toBe(aiee);
+
+    const both = toEntitySummary("person", {
+      person_id: "p_2",
+      slug: "b",
+      full_name: "C D",
+      sessionize_profile_picture_url: sessionize,
+      ai_engineer_url: aiee,
+    });
+    expect(both.imageUrl).toBe(sessionize);
+  });
+
   it("falls back to id when slug is missing", () => {
     const summary = toEntitySummary("youtube_video", {
       video_id: "Xz5oP",

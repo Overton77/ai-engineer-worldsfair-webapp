@@ -51,6 +51,7 @@ export type AnyEntityRow = {
   cover_url?: string | null;
   hero_image_url?: string | null;
   sessionize_profile_picture_url?: string | null;
+  ai_engineer_url?: string | null;
   // Taxonomy
   category?: string | null;
   domain_layer?: string | null;
@@ -128,6 +129,7 @@ function pickImage(row: AnyEntityRow): string | null {
     row.thumbnail_url ??
     row.avatar_url ??
     row.sessionize_profile_picture_url ??
+    row.ai_engineer_url ??
     row.logo_url ??
     row.cover_url ??
     row.hero_image_url ??

@@ -52,7 +52,9 @@ export default async function PersonDossierPage({ params }: PersonPageProps) {
         title={person.full_name ?? person.slug}
         subtitle={person.tag_line ?? person.role_title ?? null}
         description={person.bio ?? person.notable_for ?? null}
-        imageUrl={person.sessionize_profile_picture_url}
+        imageUrl={
+          person.sessionize_profile_picture_url || person.ai_engineer_url
+        }
         tags={person.expertise_tags}
         meta={[
           person.role_title,
