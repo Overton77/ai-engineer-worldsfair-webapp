@@ -1,16 +1,16 @@
 "use client";
 
-import { Pencil, X } from "lucide-react";
+import { Maximize2, Minimize2, Pencil, X } from "lucide-react";
 import * as React from "react";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { toast } from "sonner";
 
 import { createNoteAction } from "@/app/actions/notes";
 import {
-  ChapterList,
   VideoPlayer,
   type VideoPlayerHandle,
 } from "@/components/dossier/video-player";
+import { DraggablePip } from "@/components/notes/draggable-pip";
 import { EntityNotesPanel } from "@/components/notes/entity-notes-panel";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +23,8 @@ import { useNotesLayout } from "@/lib/hooks/use-notes-layout";
 import { formatTimestamp } from "@/lib/notes/derive-text";
 import { useNoteUrlState } from "@/lib/notes/use-note-url-state";
 import { cn } from "@/lib/utils";
+
+type Layout = "split" | "theatre" | "focus" | "off";
 
 type VideoNotesShellProps = {
   videoId: string;
@@ -38,10 +40,13 @@ type VideoNotesShellProps = {
  * The marquee video flow (N3 in 03a-notes-rethink-wireframes.md).
  *
  * Owns the YouTube player + the `?t=` URL param + the `?notes=` layout
- * param. Sets `window.__videoNotesCtx__` so the TimestampMention
- * extension's keyboard shortcut (⌘⇧K) can read the current player
- * position. Click handler on `.timestamp-mention` chips inside the
- * editor seeks the player.
+ * param. The `<VideoPlayer>` is mounted EXACTLY ONCE for the lifetime
+ * of this component; layout switches only re-parent / re-style the
+ * surrounding chrome so the iframe never reloads. This is what makes
+ * "swap to PiP while I keep watching" actually work.
+ *
+ * Sets `window.__videoNotesCtx__` so the TimestampMention extension's
+ * keyboard shortcut (⌘⇧K) can read the current player position.
  */
 export function VideoNotesShell({
   videoId,
@@ -53,25 +58,17 @@ export function VideoNotesShell({
   const [layoutPref, setLayoutPref] = useNotesLayout("youtube_video", "off");
   const playerRef = React.useRef<VideoPlayerHandle>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
+  // Tracked at the top so the rules-of-hooks gate doesn't trip when
+  // we early-return for off/theatre/focus before reaching split.
+  const isWide = useIsWide();
 
   // The current visible layout: URL param first, then user preference.
-  const layout: "split" | "theatre" | "focus" | "off" =
+  const layout: Layout =
     notes === "split" || notes === "theatre" || notes === "focus"
       ? notes
       : layoutPref === "off"
         ? "off"
         : layoutPref;
-
-  // First-mount: if URL is empty but the user has a saved preference,
-  // restore it.
-  const restoredRef = React.useRef(false);
-  React.useEffect(() => {
-    if (restoredRef.current) return;
-    restoredRef.current = true;
-    if (notes === null && layoutPref !== "off") {
-      setLayout(layoutPref);
-    }
-  }, [notes, layoutPref, setLayout]);
 
   // Expose ctx for the TimestampMention ⌘⇧K shortcut.
   React.useEffect(() => {
@@ -91,11 +88,9 @@ export function VideoNotesShell({
   }, [videoId, t]);
 
   // Click on any rendered `.timestamp-mention` chip in the page seeks
-  // the player. Wire at the container level so it works for chips
-  // that live inside the editor (which is a portal-friendly spot).
+  // the player. Wire at the document level so it works for chips that
+  // live inside the editor (which can be portalled).
   React.useEffect(() => {
-    const root = containerRef.current;
-    if (!root) return;
     const handler = (e: MouseEvent) => {
       const el = (e.target as HTMLElement | null)?.closest(
         '[data-mention-type="timestamp"]',
@@ -112,6 +107,19 @@ export function VideoNotesShell({
     return () => document.removeEventListener("click", handler);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Esc cycles focus/theatre back to split (the "home" mode for video).
+  React.useEffect(() => {
+    if (layout !== "focus" && layout !== "theatre") return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setBoth("split");
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [layout]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const seek = React.useCallback(
     (seconds: number) => {
       setT(seconds);
@@ -120,15 +128,14 @@ export function VideoNotesShell({
     [setT],
   );
 
-  const setBoth = (next: "split" | "theatre" | "focus" | "off") => {
+  const setBoth = (next: Layout) => {
     setLayoutPref(next);
     setLayout(next === "off" ? null : next);
   };
 
   // Per-chapter [📝] handler: create a note pre-titled with the
   // chapter title and pin to this video. Opens it in the active note
-  // slot. Insertion of the timestamp itself is best-effort — we hand
-  // the note id back; the editor mount uses it.
+  // slot (inline; the drawer self-suppresses when ?notes= is set).
   const onChapterNote = async (chapter: {
     start_seconds: number;
     title: string;
@@ -141,29 +148,67 @@ export function VideoNotesShell({
       toast.error(result.error || "Failed to create note");
       return;
     }
+    // Make sure we're in split so the new note opens inline rather
+    // than triggering the global quick-drawer.
+    if (layout === "off") setBoth("split");
     openNote(result.id);
     toast.success(`New note for chapter @ ${formatTimestamp(chapter.start_seconds)}`);
   };
 
-  // ─── Layout off — original split (player + chapters only) ─────
+  // ─── Single, stable player element ────────────────────────────
+  // Rendered once and parked in different containers per layout.
+  // This is the fix for the dual-mount bug where two <VideoPlayer>
+  // instances shared one ref and the iframe reloaded on every
+  // layout switch.
+  const playerEl = React.useMemo(
+    () => <VideoPlayer ref={playerRef} videoId={videoId} startSeconds={t} />,
+    // We intentionally exclude `t` from deps — the player owns its
+    // own playback position once mounted, and remounting on every
+    // ?t= change would defeat the whole purpose of this shell.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [videoId],
+  );
+
+  const notesPane = (
+    <NotesPaneTabs
+      videoId={videoId}
+      videoTitle={videoTitle}
+      chapters={chapters}
+      t={t}
+      seek={seek}
+      onChapterNote={onChapterNote}
+      getCurrentTime={() => playerRef.current?.getCurrentTime() ?? t}
+      activeNoteId={note}
+      onActiveNoteChange={(id) => openNote(id ?? "")}
+    />
+  );
+
+  // ─── Layout: off — original chapter-list aside ────────────────
   if (layout === "off") {
     return (
-      <div
-        ref={containerRef}
-        className="grid gap-4 md:grid-cols-[1fr_minmax(220px,_280px)]"
-      >
-        <FirstVisitNudge layout={layout} onTry={() => setBoth("split")} />
-        <VideoPlayer ref={playerRef} videoId={videoId} startSeconds={t} />
-        <ChaptersAside chapters={chapters} t={t} onSeek={seek} onChapterNote={onChapterNote} />
+      <div ref={containerRef} className="flex flex-col gap-3">
+        <LayoutControls layout={layout} onChange={setBoth} />
+        <div className="grid gap-4 md:grid-cols-[1fr_minmax(220px,280px)]">
+          {playerEl}
+          <ChaptersAside
+            chapters={chapters}
+            t={t}
+            onSeek={seek}
+            onChapterNote={onChapterNote}
+          />
+        </div>
       </div>
     );
   }
 
-  // ─── Theatre mode — notes hidden, "Show notes" pill ───────────
+  // ─── Layout: theatre — wide player, notes hidden ──────────────
   if (layout === "theatre") {
     return (
-      <div ref={containerRef} className="relative">
-        <VideoPlayer ref={playerRef} videoId={videoId} startSeconds={t} />
+      <div ref={containerRef} className="flex flex-col gap-3">
+        <LayoutControls layout={layout} onChange={setBoth} />
+        <div className="mx-auto w-full max-w-[min(1600px,100%)]">
+          {playerEl}
+        </div>
         <Button
           type="button"
           size="sm"
@@ -178,104 +223,150 @@ export function VideoNotesShell({
     );
   }
 
-  // ─── Focus mode — player shrinks to bottom-right card,
-  //     editor takes the whole row ───────────────────────────────
+  // ─── Layout: focus — editor full width, player floats as PiP ──
   if (layout === "focus") {
     return (
-      <div ref={containerRef} className="flex min-h-[70vh] flex-col gap-3">
-        <NotesPaneTabs
-          videoId={videoId}
-          videoTitle={videoTitle}
-          chapters={chapters}
-          t={t}
-          seek={seek}
-          onChapterNote={onChapterNote}
-          getCurrentTime={() => playerRef.current?.getCurrentTime() ?? t}
-          activeNoteId={note}
-          onActiveNoteChange={(id) => openNote(id ?? "")}
-        />
-        {/* Floating mini player. Same instance via ref, just CSS-positioned. */}
-        <div className="border-border/60 bg-background fixed right-4 bottom-4 z-40 w-[260px] overflow-hidden rounded-xl border shadow-2xl">
-          <VideoPlayer ref={playerRef} videoId={videoId} startSeconds={t} />
-          <div className="flex items-center justify-between gap-2 px-2 py-1 text-xs">
-            <span className="text-muted-foreground truncate">{videoTitle}</span>
-            <Button
-              type="button"
-              size="xs"
-              variant="ghost"
-              onClick={() => setBoth("split")}
-              aria-label="Exit focus mode"
-            >
-              <X className="size-3" />
-            </Button>
-          </div>
+      <div
+        ref={containerRef}
+        className="flex h-[calc(100svh-14rem)] min-h-[520px] flex-col gap-3"
+      >
+        <LayoutControls layout={layout} onChange={setBoth} />
+        <div className="border-border/60 bg-card/40 min-h-0 flex-1 rounded-xl border">
+          {notesPane}
         </div>
+        <DraggablePip
+          titleBar={
+            <>
+              <span className="text-muted-foreground truncate">
+                {videoTitle}
+              </span>
+              <div className="flex shrink-0 items-center gap-0.5">
+                <Button
+                  type="button"
+                  size="xs"
+                  variant="ghost"
+                  onClick={() => setBoth("split")}
+                  aria-label="Back to split"
+                  title="Back to split (Esc)"
+                  className="h-5 px-1"
+                >
+                  <Minimize2 className="size-3" />
+                </Button>
+                <Button
+                  type="button"
+                  size="xs"
+                  variant="ghost"
+                  onClick={() => setBoth("theatre")}
+                  aria-label="Theatre mode"
+                  title="Theatre"
+                  className="h-5 px-1"
+                >
+                  <Maximize2 className="size-3" />
+                </Button>
+                <Button
+                  type="button"
+                  size="xs"
+                  variant="ghost"
+                  onClick={() => setBoth("off")}
+                  aria-label="Close PiP"
+                  title="Close"
+                  className="h-5 px-1"
+                >
+                  <X className="size-3" />
+                </Button>
+              </div>
+            </>
+          }
+        >
+          {playerEl}
+        </DraggablePip>
       </div>
     );
   }
 
-  // ─── Split mode (default once opted in) ──────────────────────
+  // ─── Layout: split (default once opted in) ────────────────────
+  // We pick orientation at runtime based on viewport width so the
+  // ResizablePanelGroup is mounted exactly once (the library forces
+  // `display: flex` inline on its root div, which defeats Tailwind's
+  // `hidden`/`xl:flex` toggling — so we'd otherwise dual-mount the
+  // player). Sizes are passed as `"60%"` strings, NOT `60` — v4 of
+  // react-resizable-panels treats bare numbers as PIXELS, not percent.
   return (
-    <div ref={containerRef} className="flex min-h-[70vh] flex-col gap-2">
-      <LayoutControls
-        layout={layout}
-        onChange={setBoth}
-      />
+    <div
+      ref={containerRef}
+      className="flex h-[calc(100svh-14rem)] min-h-[520px] flex-col gap-3"
+    >
+      <LayoutControls layout={layout} onChange={setBoth} />
+
       <ResizablePanelGroup
-        orientation="horizontal"
-        className="hidden min-h-[70vh] xl:flex"
+        orientation={isWide ? "horizontal" : "vertical"}
+        className="min-h-0 flex-1"
       >
-        <ResizablePanel defaultSize={60} minSize={40} maxSize={75}>
-          <VideoPlayer ref={playerRef} videoId={videoId} startSeconds={t} />
+        <ResizablePanel
+          defaultSize={isWide ? "60%" : "55%"}
+          minSize="35%"
+          maxSize="80%"
+        >
+          <div
+            className={cn(
+              "flex h-full w-full items-start",
+              isWide ? "pr-3" : "pb-3",
+            )}
+          >
+            <div className="w-full">{playerEl}</div>
+          </div>
         </ResizablePanel>
         <ResizableHandle withHandle />
-        <ResizablePanel defaultSize={40} minSize={28}>
-          <NotesPaneTabs
-            videoId={videoId}
-            videoTitle={videoTitle}
-            chapters={chapters}
-            t={t}
-            seek={seek}
-            onChapterNote={onChapterNote}
-            getCurrentTime={() => playerRef.current?.getCurrentTime() ?? t}
-            activeNoteId={note}
-            onActiveNoteChange={(id) => openNote(id ?? "")}
-            className="border-border/60 bg-card/40 ml-3 h-full rounded-xl border"
-          />
+        <ResizablePanel defaultSize={isWide ? "40%" : "45%"} minSize="20%">
+          <div
+            className={cn(
+              "border-border/60 bg-card/40 h-full rounded-xl border",
+              isWide ? "ml-3" : "mt-3",
+            )}
+          >
+            {notesPane}
+          </div>
         </ResizablePanel>
       </ResizablePanelGroup>
-
-      {/* Stacked layout for narrow viewports */}
-      <div className="flex flex-col gap-3 xl:hidden">
-        <VideoPlayer ref={playerRef} videoId={videoId} startSeconds={t} />
-        <div className="border-border/60 bg-card/40 h-[60vh] rounded-xl border">
-          <NotesPaneTabs
-            videoId={videoId}
-            videoTitle={videoTitle}
-            chapters={chapters}
-            t={t}
-            seek={seek}
-            onChapterNote={onChapterNote}
-            getCurrentTime={() => playerRef.current?.getCurrentTime() ?? t}
-            activeNoteId={note}
-            onActiveNoteChange={(id) => openNote(id ?? "")}
-          />
-        </div>
-      </div>
     </div>
   );
+}
+
+/**
+ * Tracks whether the viewport is at the xl breakpoint (1280px) — used
+ * to flip the resizable panel group between horizontal (side-by-side)
+ * and vertical (stacked) at the same breakpoint Tailwind's `xl:` uses.
+ */
+function useIsWide(): boolean {
+  const [wide, setWide] = React.useState(false);
+  React.useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mq = window.matchMedia("(min-width: 1280px)");
+    const onChange = () => setWide(mq.matches);
+    onChange();
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+  return wide;
 }
 
 function LayoutControls({
   layout,
   onChange,
+  className,
 }: {
-  layout: "split" | "theatre" | "focus" | "off";
-  onChange: (next: "split" | "theatre" | "focus" | "off") => void;
+  layout: Layout;
+  onChange: (next: Layout) => void;
+  className?: string;
 }) {
   return (
-    <div className="text-muted-foreground flex items-center justify-end gap-1 text-[10px]">
-      <span>Layout</span>
+    <div
+      className={cn(
+        "border-border/60 bg-card/60 text-muted-foreground sticky top-2 z-30 flex items-center justify-end gap-1 self-end rounded-full border px-2 py-1 text-[10px] shadow-sm backdrop-blur",
+        className,
+      )}
+    >
+      <span className="px-1">Layout</span>
       {(["split", "theatre", "focus", "off"] as const).map((m) => (
         <Button
           key={m}
@@ -427,46 +518,6 @@ function ChaptersAside({
           );
         })}
       </ol>
-    </div>
-  );
-}
-
-function FirstVisitNudge({
-  layout,
-  onTry,
-}: {
-  layout: "split" | "theatre" | "focus" | "off";
-  onTry: () => void;
-}) {
-  // Only show on first visit when nothing is set yet.
-  const [dismissed, setDismissed] = React.useState(false);
-  React.useEffect(() => {
-    if (typeof window === "undefined") return;
-    setDismissed(window.localStorage.getItem("aie:wn-nudge-dismissed") === "1");
-  }, []);
-  if (layout !== "off" || dismissed) return null;
-  return (
-    <div className="border-primary/40 bg-primary/5 col-span-full flex items-center justify-between gap-3 rounded-xl border px-3 py-2 text-xs">
-      <span>
-        <strong>Watch + take notes</strong> at the same time. Try split mode to see
-        notes alongside the player.
-      </span>
-      <div className="flex gap-1">
-        <Button type="button" size="xs" onClick={onTry}>
-          Try split mode
-        </Button>
-        <Button
-          type="button"
-          size="xs"
-          variant="ghost"
-          onClick={() => {
-            window.localStorage.setItem("aie:wn-nudge-dismissed", "1");
-            setDismissed(true);
-          }}
-        >
-          Dismiss
-        </Button>
-      </div>
     </div>
   );
 }

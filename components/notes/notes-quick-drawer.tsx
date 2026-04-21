@@ -39,12 +39,24 @@ import { NoteEditor, type NoteEditorHandle } from "./note-editor";
  */
 export function NotesQuickDrawer() {
   const router = useRouter();
-  const { note, pinTo, closeNote } = useNoteUrlState();
+  const { note, notes, pinTo, closeNote } = useNoteUrlState();
   const [boot, setBoot] = React.useState<DrawerBootstrap | null>(null);
   const [loading, setLoading] = React.useState(false);
   const editorRef = React.useRef<NoteEditorHandle | null>(null);
 
-  const open = note !== null;
+  // The drawer is the secondary surface — it must stay closed when
+  // the host page is already showing the note inline (split / theatre
+  // / focus on a dossier). Without this guard, every inline
+  // `openNote()` call also pops the drawer because both surfaces
+  // listen to the same `?note=` param.
+  const inlineSurfaceActive = notes !== null;
+
+  // `?note=new` without a `pinTo` is a dead-end — the bootstrap
+  // action can't create a row without an entity, so the drawer would
+  // sit on a perpetual spinner. Treat it as closed.
+  const isOrphanNew = note === "new" && !pinTo;
+
+  const open = note !== null && !inlineSurfaceActive && !isOrphanNew;
 
   // Bootstrap whenever the (note, pinTo) pair changes
   React.useEffect(() => {
@@ -81,6 +93,7 @@ export function NotesQuickDrawer() {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, note, pinTo?.kind, pinTo?.id]);
 
   // When the sheet closes, flush autosave first.
