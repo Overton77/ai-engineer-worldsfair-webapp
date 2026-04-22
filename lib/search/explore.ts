@@ -9,6 +9,7 @@ import {
 import { createServerSupabase } from "@/lib/supabase/server";
 import type { Database } from "@/types/database.types";
 
+import { ROLE_BUCKETS } from "./people-roles";
 import {
   EXPLORE_SORTS,
   ExploreRowSchema,
@@ -25,11 +26,16 @@ export {
   EXPLORE_SORTS,
   ExploreKindSchema,
   ExploreRowSchema,
+  KIND_DEFAULT_SORT_NO_Q,
+  KIND_FILTER_DIMENSIONS,
+  KIND_SORT_OPTIONS,
+  kindHasDimension,
   type ExploreFilters,
   type ExploreKind,
   type ExploreResult,
   type ExploreRow,
   type ExploreSort,
+  type FilterDimension,
 } from "./explore-shared";
 
 type Client = SupabaseClient<Database>;
@@ -57,6 +63,7 @@ type ExploreRpc =
 const LAYER_SET = new Set<string>(DOMAIN_LAYERS);
 const CATEGORY_SET = new Set<string>(CATEGORY_KEYS);
 const SORT_SET = new Set<string>(EXPLORE_SORTS);
+const ROLE_SET = new Set<string>(ROLE_BUCKETS);
 
 function sanitizeStringArray(
   input: readonly string[] | undefined,
@@ -67,7 +74,7 @@ function sanitizeStringArray(
   return out.length > 0 ? out : undefined;
 }
 
-function sanitizeFreeTags(
+function sanitizeFreeStrings(
   input: readonly string[] | undefined,
 ): string[] | undefined {
   if (!input || input.length === 0) return undefined;
@@ -113,15 +120,27 @@ export async function exploreEntities(
   const sb = client ?? (await createServerSupabase());
   const trimmedQ = (filters.q ?? "").trim();
 
-  const args = {
+  // Build the args object. People-specific args (role_buckets, org_ids)
+  // are only included for the person RPC; including them on other RPCs
+  // would be a runtime error since their signatures don't accept them.
+  const baseArgs = {
     q: trimmedQ.length > 0 ? trimmedQ : undefined,
     layers: sanitizeStringArray(filters.layers, LAYER_SET),
     categories: sanitizeStringArray(filters.categories, CATEGORY_SET),
-    tags: sanitizeFreeTags(filters.tags),
+    tags: sanitizeFreeStrings(filters.tags),
     sort: pickSort(trimmedQ, filters.sort),
     limit_count: clampLimit(filters.limit),
     offset_count: clampOffset(filters.offset),
   };
+
+  const args =
+    kind === "person"
+      ? {
+          ...baseArgs,
+          role_buckets: sanitizeStringArray(filters.roleBuckets, ROLE_SET),
+          org_ids: sanitizeFreeStrings(filters.orgIds),
+        }
+      : baseArgs;
 
   const { data, error } = await sb.rpc(rpcName, args);
   if (error) {

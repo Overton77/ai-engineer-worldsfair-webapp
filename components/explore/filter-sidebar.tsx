@@ -1,12 +1,15 @@
 "use client";
 
-import { Plus, RotateCcw, X } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import * as React from "react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
+import {
+  KIND_FILTER_DIMENSIONS,
+  kindHasDimension,
+  type ExploreKind,
+  type FilterDimension,
+} from "@/lib/search/explore-shared";
 import {
   CATEGORY_KEYS,
   CATEGORY_LABELS,
@@ -15,71 +18,87 @@ import {
   type CategoryKey,
   type DomainLayer,
 } from "@/lib/schema/taxonomy";
+import {
+  ROLE_BUCKETS,
+  ROLE_BUCKET_LABELS,
+  type RoleBucket,
+} from "@/lib/search/people-roles";
+import type {
+  OrgFacet,
+  PeopleFacets,
+} from "@/lib/db/people-facets";
 import { cn } from "@/lib/utils";
+
+import { CheckboxGroup, type CheckboxOption } from "./filters/checkbox-group";
+import { FilterStack } from "./filters/filter-group";
+import { OrgPickerGroup } from "./filters/org-picker-group";
+import { TagComboboxGroup } from "./filters/tag-combobox-group";
 
 export type FilterValue = {
   layers: DomainLayer[];
   categories: CategoryKey[];
   tags: string[];
+  roleBuckets: RoleBucket[];
+  orgIds: string[];
 };
 
-type FilterSidebarProps = {
+export type FilterSidebarProps = {
+  kind: ExploreKind;
   value: FilterValue;
   onChange: (next: FilterValue) => void;
-  /**
-   * Which filter dimensions the active entity kind supports. Groups
-   * whose flag is false are not rendered at all (vs being greyed out)
-   * so the sidebar reads as "filters that apply here".
-   */
-  available?: {
-    layers?: boolean;
-    categories?: boolean;
-    tags?: boolean;
-  };
-  className?: string;
   resultCount?: number;
+  /**
+   * Live facet counts for the People view. When provided, the sidebar
+   * shows real counts next to each option and scopes tag suggestions
+   * by the current query/filter.
+   */
+  peopleFacets?: PeopleFacets;
+  peopleFacetsLoading?: boolean;
+  className?: string;
 };
 
-function toggle<T>(arr: T[], v: T): T[] {
-  return arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v];
+/** Lookup details for currently-selected orgs that may not be in the
+ * top-N facet list, so the chips render with a name + logo. */
+function deriveOrgDetails(
+  facets: PeopleFacets | undefined,
+): Record<string, OrgFacet> {
+  if (!facets) return {};
+  const out: Record<string, OrgFacet> = {};
+  facets.orgs.forEach((o) => {
+    out[o.id] = o;
+  });
+  return out;
 }
 
 export function FilterSidebar({
+  kind,
   value,
   onChange,
-  available = { layers: true, categories: true, tags: true },
-  className,
   resultCount,
+  peopleFacets,
+  peopleFacetsLoading,
+  className,
 }: FilterSidebarProps) {
-  const [tagDraft, setTagDraft] = React.useState("");
-
-  const showLayers = available.layers !== false;
-  const showCategories = available.categories !== false;
-  const showTags = available.tags !== false;
-  const hasAnyGroup = showLayers || showCategories || showTags;
-
-  const reset = () =>
-    onChange({ layers: [], categories: [], tags: [] });
-
-  const addTag = () => {
-    const t = tagDraft.trim();
-    if (!t) return;
-    if (value.tags.includes(t)) {
-      setTagDraft("");
-      return;
-    }
-    onChange({ ...value, tags: [...value.tags, t] });
-    setTagDraft("");
-  };
+  const dims = KIND_FILTER_DIMENSIONS[kind];
+  const hasAny = dims.length > 0;
 
   const totalActive =
-    (showLayers ? value.layers.length : 0) +
-    (showCategories ? value.categories.length : 0) +
-    (showTags ? value.tags.length : 0);
+    value.layers.length +
+    value.categories.length +
+    value.tags.length +
+    value.roleBuckets.length +
+    value.orgIds.length;
 
-  if (!hasAnyGroup) {
-    // Nothing to filter by for this entity kind — render a compact
-    // "results count only" rail so the layout stays balanced.
+  const reset = () =>
+    onChange({
+      layers: [],
+      categories: [],
+      tags: [],
+      roleBuckets: [],
+      orgIds: [],
+    });
+
+  if (!hasAny) {
     return (
       <aside
         className={cn(
@@ -101,129 +120,127 @@ export function FilterSidebar({
     );
   }
 
-  let rendered = 0;
-  const groups: React.ReactNode[] = [];
-
-  if (showLayers) {
-    if (rendered++ > 0) groups.push(<Separator key="sep-layer" />);
-    groups.push(
-      <FilterGroup key="layer" title="Layer">
-        <div className="flex flex-col gap-1.5">
-          {DOMAIN_LAYERS.map((layer) => {
-            const meta = DOMAIN_LAYER_META[layer];
-            const checked = value.layers.includes(layer);
-            return (
-              <label
-                key={layer}
-                className="flex cursor-pointer items-center gap-2 text-sm"
-              >
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  onChange={() =>
-                    onChange({ ...value, layers: toggle(value.layers, layer) })
-                  }
-                  className="border-border h-4 w-4 rounded border accent-primary"
-                />
-                <span className="text-muted-foreground font-mono text-[10px]">
-                  {meta.code}
-                </span>
-                <span>{meta.label}</span>
-              </label>
-            );
-          })}
-        </div>
-      </FilterGroup>,
-    );
-  }
-
-  if (showCategories) {
-    if (rendered++ > 0) groups.push(<Separator key="sep-cat" />);
-    groups.push(
-      <FilterGroup key="category" title="Category">
-        <div className="max-h-72 space-y-1 overflow-y-auto pr-1">
-          {CATEGORY_KEYS.map((cat) => {
-            const checked = value.categories.includes(cat);
-            return (
-              <label
-                key={cat}
-                className="flex cursor-pointer items-center gap-2 text-sm"
-              >
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  onChange={() =>
-                    onChange({
-                      ...value,
-                      categories: toggle(value.categories, cat),
-                    })
-                  }
-                  className="border-border h-4 w-4 rounded border accent-primary"
-                />
-                <span>{CATEGORY_LABELS[cat]}</span>
-              </label>
-            );
-          })}
-        </div>
-      </FilterGroup>,
-    );
-  }
-
-  if (showTags) {
-    if (rendered++ > 0) groups.push(<Separator key="sep-tags" />);
-    groups.push(
-      <FilterGroup key="tags" title="Tags">
-        <div className="flex flex-col gap-2">
-          {value.tags.length > 0 ? (
-            <div className="flex flex-wrap gap-1">
-              {value.tags.map((t) => (
-                <Badge key={t} variant="secondary" className="gap-1">
-                  {t}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      onChange({
-                        ...value,
-                        tags: value.tags.filter((x) => x !== t),
-                      })
-                    }
-                    aria-label={`Remove tag ${t}`}
-                    className="hover:text-foreground"
-                  >
-                    <X className="size-2.5" />
-                  </button>
-                </Badge>
-              ))}
-            </div>
-          ) : null}
-          <div className="flex gap-1">
-            <Input
-              value={tagDraft}
-              onChange={(e) => setTagDraft(e.target.value)}
-              placeholder="add tag…"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  addTag();
-                }
-              }}
-              className="h-7 text-xs"
-            />
-            <Button
-              type="button"
-              size="icon-sm"
-              variant="outline"
-              onClick={addTag}
-              disabled={!tagDraft.trim()}
-              aria-label="Add tag"
-            >
-              <Plus className="size-3" />
-            </Button>
-          </div>
-        </div>
-      </FilterGroup>,
-    );
-  }
+  // Build per-dimension nodes so the order is driven by `dims` (per-kind
+  // declared order in KIND_FILTER_DIMENSIONS).
+  const nodeFor = (dim: FilterDimension): React.ReactNode => {
+    switch (dim) {
+      case "layers":
+        return (
+          <CheckboxGroup
+            key="layers"
+            title="Layer"
+            selected={value.layers}
+            onChange={(next) =>
+              onChange({ ...value, layers: next as DomainLayer[] })
+            }
+            options={DOMAIN_LAYERS.map(
+              (layer): CheckboxOption => ({
+                value: layer,
+                label: DOMAIN_LAYER_META[layer].label,
+                prefix: DOMAIN_LAYER_META[layer].code,
+              }),
+            )}
+          />
+        );
+      case "categories":
+        return (
+          <CheckboxGroup
+            key="categories"
+            title="Category"
+            selected={value.categories}
+            onChange={(next) =>
+              onChange({ ...value, categories: next as CategoryKey[] })
+            }
+            options={CATEGORY_KEYS.map(
+              (cat): CheckboxOption => ({
+                value: cat,
+                label: CATEGORY_LABELS[cat],
+              }),
+            )}
+          />
+        );
+      case "roleBuckets": {
+        const counts = new Map<string, number>(
+          (peopleFacets?.role_buckets ?? []).map((r) => [r.value, r.count]),
+        );
+        return (
+          <CheckboxGroup
+            key="roleBuckets"
+            title="Role"
+            selected={value.roleBuckets}
+            onChange={(next) =>
+              onChange({ ...value, roleBuckets: next as RoleBucket[] })
+            }
+            hideEmpty
+            options={ROLE_BUCKETS.map(
+              (rb): CheckboxOption => ({
+                value: rb,
+                label: ROLE_BUCKET_LABELS[rb],
+                count: counts.get(rb),
+              }),
+            )}
+          />
+        );
+      }
+      case "orgs": {
+        const orgs = peopleFacets?.orgs ?? [];
+        const selectedDetails = deriveOrgDetails(peopleFacets);
+        return (
+          <OrgPickerGroup
+            key="orgs"
+            options={orgs.map((o) => ({
+              id: o.id,
+              name: o.name,
+              slug: o.slug,
+              logoUrl: o.logo_url,
+              count: o.count,
+            }))}
+            selected={value.orgIds}
+            selectedDetails={Object.fromEntries(
+              Object.entries(selectedDetails).map(([k, o]) => [
+                k,
+                {
+                  id: o.id,
+                  name: o.name,
+                  slug: o.slug,
+                  logoUrl: o.logo_url,
+                  count: o.count,
+                },
+              ]),
+            )}
+            onChange={(next) => onChange({ ...value, orgIds: next })}
+            loading={peopleFacetsLoading}
+          />
+        );
+      }
+      case "tags": {
+        const suggestions = (peopleFacets?.tags ?? []).map((t) => ({
+          value: t.value,
+          count: t.count,
+        }));
+        // For non-people kinds we don't (yet) have a facet endpoint, so
+        // fall back to free-form entry.
+        const isPerson = kind === "person";
+        return (
+          <TagComboboxGroup
+            key="tags"
+            suggestions={suggestions}
+            selected={value.tags}
+            onChange={(next) => onChange({ ...value, tags: next })}
+            allowFreeform={!isPerson}
+            loading={peopleFacetsLoading}
+            emptyMessage={
+              isPerson
+                ? "No tags indexed for People yet."
+                : undefined
+            }
+          />
+        );
+      }
+      default:
+        return null;
+    }
+  };
 
   return (
     <aside
@@ -249,24 +266,11 @@ export function FilterSidebar({
         </p>
       ) : null}
 
-      {groups}
+      <FilterStack>
+        {dims
+          .filter((d) => kindHasDimension(kind, d))
+          .map((d) => nodeFor(d))}
+      </FilterStack>
     </aside>
-  );
-}
-
-function FilterGroup({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="flex flex-col gap-2">
-      <h3 className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
-        {title}
-      </h3>
-      {children}
-    </section>
   );
 }

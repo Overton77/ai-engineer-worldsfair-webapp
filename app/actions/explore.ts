@@ -6,6 +6,7 @@ import {
   CATEGORY_KEYS,
   DOMAIN_LAYERS,
 } from "@/lib/schema/taxonomy";
+import { ROLE_BUCKETS } from "@/lib/search/people-roles";
 import {
   EXPLORE_KINDS,
   EXPLORE_SORTS,
@@ -19,6 +20,8 @@ const ArgsSchema = z.object({
   layers: z.array(z.enum(DOMAIN_LAYERS)).optional(),
   categories: z.array(z.enum(CATEGORY_KEYS)).optional(),
   tags: z.array(z.string().min(1).max(64)).optional(),
+  roleBuckets: z.array(z.enum(ROLE_BUCKETS)).optional(),
+  orgIds: z.array(z.string().min(1).max(64)).optional(),
   sort: z.enum(EXPLORE_SORTS).optional(),
   limit: z.number().int().positive().max(100).optional(),
   offset: z.number().int().nonnegative().optional(),

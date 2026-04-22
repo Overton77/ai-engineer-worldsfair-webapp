@@ -8,13 +8,23 @@ import {
 } from "@/lib/schema/taxonomy";
 import { getSaveFollowState } from "@/lib/db/save-follow-state";
 import {
+  EMPTY_PEOPLE_FACETS,
+  getPeopleFacets,
+} from "@/lib/db/people-facets";
+import {
   EXPLORE_KIND_LABELS,
   EXPLORE_KINDS,
   EXPLORE_SORTS,
+  KIND_DEFAULT_SORT_NO_Q,
+  KIND_SORT_OPTIONS,
   exploreEntities,
   type ExploreKind,
   type ExploreSort,
 } from "@/lib/search/explore";
+import {
+  ROLE_BUCKETS,
+  type RoleBucket,
+} from "@/lib/search/people-roles";
 
 import { ExploreShell } from "./_explore-shell";
 
@@ -29,6 +39,7 @@ const KIND_SET = new Set<string>(EXPLORE_KINDS);
 const LAYER_SET = new Set<string>(DOMAIN_LAYERS);
 const CATEGORY_SET = new Set<string>(CATEGORY_KEYS);
 const SORT_SET = new Set<string>(EXPLORE_SORTS);
+const ROLE_SET = new Set<string>(ROLE_BUCKETS);
 
 function parseStringArray(raw: unknown, whitelist?: ReadonlySet<string>): string[] {
   if (typeof raw !== "string" || !raw) return [];
@@ -61,32 +72,51 @@ export default async function ExploreTypePage({
     CATEGORY_SET,
   ) as CategoryKey[];
   const tags = parseStringArray(sp.tags);
+  const roleBuckets = parseStringArray(sp.roles, ROLE_SET) as RoleBucket[];
+  const orgIds = parseStringArray(sp.orgs);
   const trimmedQ = q.trim();
+
   const sortRaw = typeof sp.sort === "string" ? sp.sort : "";
-  const sort: ExploreSort = SORT_SET.has(sortRaw)
-    ? (sortRaw as ExploreSort)
-    : trimmedQ
-      ? "relevance"
-      : "popularity";
+  const allowedSorts = new Set<string>(KIND_SORT_OPTIONS[kind]);
+  let sort: ExploreSort;
+  if (SORT_SET.has(sortRaw) && allowedSorts.has(sortRaw)) {
+    sort = sortRaw as ExploreSort;
+  } else if (trimmedQ) {
+    sort = "relevance";
+  } else {
+    sort = KIND_DEFAULT_SORT_NO_Q[kind];
+  }
 
-  const result = await exploreEntities(kind, {
-    q: trimmedQ || undefined,
-    layers,
-    categories,
-    tags,
-    sort,
-    limit: PAGE_SIZE,
-    offset: 0,
-  }).catch((err) => {
-    console.warn(`exploreEntities ${kind} failed:`, err);
-    return { rows: [], total: 0 };
-  });
+  // SSR-fetch the result page + (for People) the facet counts in
+  // parallel so first paint shows real numbers next to each filter.
+  const [result, peopleFacets] = await Promise.all([
+    exploreEntities(kind, {
+      q: trimmedQ || undefined,
+      layers,
+      categories,
+      tags,
+      roleBuckets,
+      orgIds,
+      sort,
+      limit: PAGE_SIZE,
+      offset: 0,
+    }).catch((err) => {
+      console.warn(`exploreEntities ${kind} failed:`, err);
+      return { rows: [], total: 0 };
+    }),
+    kind === "person"
+      ? getPeopleFacets({
+          q: trimmedQ || undefined,
+          tags,
+          roleBuckets,
+          orgIds,
+        }).catch((err) => {
+          console.warn("getPeopleFacets failed:", err);
+          return EMPTY_PEOPLE_FACETS;
+        })
+      : Promise.resolve(undefined),
+  ]);
 
-  // Pre-resolve save / follow state for the SSR'd first page so cards
-  // render with the right initial labels. Subsequent pages (load-more
-  // + filter changes) are fetched client-side and start as not-saved /
-  // not-following — that's an acceptable degradation; the toggle still
-  // works correctly server-side.
   const ssState = await getSaveFollowState(
     result.rows.map((r) => ({ kind, id: r.entity_id })),
   );
@@ -98,10 +128,11 @@ export default async function ExploreTypePage({
         initialRows={result.rows}
         initialTotal={result.total}
         initialQuery={q}
-        initialFilter={{ layers, categories, tags }}
+        initialFilter={{ layers, categories, tags, roleBuckets, orgIds }}
         initialSort={sort}
         initialSavedKeys={Array.from(ssState.saved)}
         initialFollowingKeys={Array.from(ssState.following)}
+        initialPeopleFacets={peopleFacets}
       />
     </div>
   );

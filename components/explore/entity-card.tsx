@@ -1,5 +1,6 @@
 "use client";
 
+import { Building2 } from "lucide-react";
 import Link from "next/link";
 
 import { FollowButton } from "@/components/save-follow/follow-button";
@@ -8,6 +9,10 @@ import { SaveButton } from "@/components/save-follow/save-button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import type { FollowEntityKind } from "@/lib/schema/entity-kind";
+import {
+  ROLE_BUCKET_LABELS,
+  isRoleBucket,
+} from "@/lib/search/people-roles";
 import { cn } from "@/lib/utils";
 import type { EntitySummary } from "@/types/domain";
 
@@ -154,6 +159,36 @@ export function EntityCard({
           ) : null}
           <EntityKindChip kind={entity.kind} className="shrink-0" />
         </div>
+
+        {entity.org || (entity.roleBucket && isRoleBucket(entity.roleBucket)) ? (
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
+            {entity.org ? (
+              <span className="text-muted-foreground inline-flex items-center gap-1">
+                {entity.org.logoUrl ? (
+                  <Avatar className="size-3.5">
+                    <AvatarImage src={entity.org.logoUrl} alt="" />
+                    <AvatarFallback className="text-[8px]">
+                      {entity.org.name[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                ) : (
+                  <Building2 className="size-3" />
+                )}
+                <span className="max-w-[180px] truncate">
+                  {entity.org.name}
+                </span>
+              </span>
+            ) : null}
+            {entity.roleBucket && isRoleBucket(entity.roleBucket) ? (
+              <Badge
+                variant="outline"
+                className="text-muted-foreground h-5 text-[10px] font-normal"
+              >
+                {ROLE_BUCKET_LABELS[entity.roleBucket]}
+              </Badge>
+            ) : null}
+          </div>
+        ) : null}
 
         {snippet ? (
           <p

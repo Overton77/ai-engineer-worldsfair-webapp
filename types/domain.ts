@@ -30,6 +30,10 @@ export type EntitySummary = {
   tags?: readonly string[];
   layer?: DomainLayer | null;
   category?: CategoryKey | null;
+  /** Person-only: resolved primary organization affiliation. */
+  org?: { id: string; name: string; logoUrl?: string | null } | null;
+  /** Person-only: derived role classifier (see person.role_bucket). */
+  roleBucket?: string | null;
 };
 
 /**

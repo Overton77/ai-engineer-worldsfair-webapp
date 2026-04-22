@@ -1864,6 +1864,7 @@ export type Database = {
           person_id: string
           personal_website: string | null
           primary_org_id: string | null
+          role_bucket: string | null
           role_title: string | null
           search_text: string | null
           seniority_level: string | null
@@ -1896,6 +1897,7 @@ export type Database = {
           person_id: string
           personal_website?: string | null
           primary_org_id?: string | null
+          role_bucket?: string | null
           role_title?: string | null
           search_text?: string | null
           seniority_level?: string | null
@@ -1928,6 +1930,7 @@ export type Database = {
           person_id?: string
           personal_website?: string | null
           primary_org_id?: string | null
+          role_bucket?: string | null
           role_title?: string | null
           search_text?: string | null
           seniority_level?: string | null
@@ -3058,6 +3061,7 @@ export type Database = {
       }
     }
     Functions: {
+      backfill_person_primary_org: { Args: never; Returns: number }
       current_streak_days: { Args: { p_user_id: string }; Returns: number }
       explore_libraries: {
         Args: {
@@ -3146,7 +3150,9 @@ export type Database = {
           layers?: string[]
           limit_count?: number
           offset_count?: number
+          org_ids?: string[]
           q?: string
+          role_buckets?: string[]
           sort?: string
           tags?: string[]
         }
@@ -3156,16 +3162,29 @@ export type Database = {
           entity_id: string
           image_url: string
           layer: string
+          org_id: string
+          org_name: string
           out_tags: string[]
           popularity: number
           rank: number
           recent_at: string
+          role_bucket: string
           slug: string
           snippet: string
           subtitle: string
           title: string
           total_count: number
         }[]
+      }
+      explore_people_facets: {
+        Args: {
+          facet_limit?: number
+          org_ids?: string[]
+          q?: string
+          role_buckets?: string[]
+          tags?: string[]
+        }
+        Returns: Json
       }
       explore_sessions: {
         Args: {

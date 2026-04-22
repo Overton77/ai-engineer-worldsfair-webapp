@@ -24,6 +24,10 @@ type ResultListProps = {
   variant?: EntityCardVariant;
   emptyTitle?: string;
   emptyDescription?: string;
+  /** Optional hint shown above the empty-state Clear button. */
+  emptyHint?: string;
+  /** When provided, shows a "Clear filters" CTA on the empty state. */
+  onClearFilters?: () => void;
   /** Render the load-more button when there are unseen results. */
   onLoadMore?: () => void;
   loadingMore?: boolean;
@@ -43,6 +47,8 @@ export function ResultList({
   variant = "result",
   emptyTitle = "No matches",
   emptyDescription = "Try fewer filters or a broader query.",
+  emptyHint,
+  onClearFilters,
   onLoadMore,
   loadingMore = false,
   className,
@@ -72,7 +78,20 @@ export function ResultList({
         <div className="border-border/60 bg-muted/30 flex flex-col items-center gap-2 rounded-xl border p-12 text-center">
           <Frown className="text-muted-foreground size-8" />
           <p className="text-base font-medium">{emptyTitle}</p>
-          <p className="text-muted-foreground text-sm">{emptyDescription}</p>
+          <p className="text-muted-foreground text-sm">
+            {emptyHint ?? emptyDescription}
+          </p>
+          {onClearFilters ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="mt-2"
+              onClick={onClearFilters}
+            >
+              Clear filters
+            </Button>
+          ) : null}
         </div>
       ) : (
         <div className={layoutClass}>
