@@ -38,42 +38,68 @@ export function NotesSplitShell({
 }: NotesSplitShellProps) {
   const { notes, note, openNote } = useNoteUrlState();
   const isOpen = notes === "split" || notes === "focus";
+  const isWide = useIsWide();
 
   if (!isOpen) {
     return <div className={className}>{children}</div>;
   }
 
   return (
-    <div className={cn("flex min-h-[60vh]", className)}>
+    <div
+      className={cn(
+        "flex h-[calc(100svh-14rem)] min-h-[520px] flex-col",
+        className,
+      )}
+    >
       <ResizablePanelGroup
-        orientation="horizontal"
-        className="hidden min-h-[70vh] xl:flex"
+        orientation={isWide ? "horizontal" : "vertical"}
+        className="min-h-0 flex-1"
       >
-        <ResizablePanel defaultSize={62} minSize={40} maxSize={75}>
-          <div className="h-full overflow-y-auto pr-4">{children}</div>
+        <ResizablePanel
+          defaultSize={isWide ? "62%" : "58%"}
+          minSize="35%"
+          maxSize="80%"
+        >
+          <div
+            className={cn(
+              "h-full overflow-y-auto",
+              isWide ? "pr-4" : "pb-4",
+            )}
+          >
+            {children}
+          </div>
         </ResizablePanel>
         <ResizableHandle withHandle />
-        <ResizablePanel defaultSize={38} minSize={25}>
+        <ResizablePanel defaultSize={isWide ? "38%" : "42%"} minSize="20%">
           <EntityNotesPanel
             entityRef={entityRef}
             activeNoteId={note}
             onActiveNoteChange={(id) => openNote(id ?? "")}
-            className="border-border/60 bg-card/40 rounded-xl border"
+            className={cn(
+              "border-border/60 bg-card/40 h-full rounded-xl border",
+              isWide ? "ml-4" : "mt-4",
+            )}
           />
         </ResizablePanel>
       </ResizablePanelGroup>
-
-      {/* On smaller screens stack vertically with no resize handle */}
-      <div className="flex w-full flex-col gap-4 xl:hidden">
-        <div className="min-h-0">{children}</div>
-        <div className="border-border/60 bg-card/40 h-[60vh] rounded-xl border">
-          <EntityNotesPanel
-            entityRef={entityRef}
-            activeNoteId={note}
-            onActiveNoteChange={(id) => openNote(id ?? "")}
-          />
-        </div>
-      </div>
     </div>
   );
+}
+
+function useIsWide(): boolean {
+  const [wide, setWide] = React.useState(false);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+
+    const query = window.matchMedia("(min-width: 1280px)");
+    const sync = () => setWide(query.matches);
+
+    sync();
+    query.addEventListener("change", sync);
+
+    return () => query.removeEventListener("change", sync);
+  }, []);
+
+  return wide;
 }

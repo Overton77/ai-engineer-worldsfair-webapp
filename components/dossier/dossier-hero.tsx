@@ -96,7 +96,7 @@ export function DossierHero({
         </Button>
       ) : null}
 
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:gap-6">
+      <div className="grid gap-4 md:grid-cols-[auto_minmax(0,1fr)] md:items-start md:gap-6 2xl:grid-cols-[auto_minmax(0,1fr)_auto]">
         <Avatar className="size-20 shrink-0 md:size-24">
           {imageUrl ? <AvatarImage src={imageUrl} alt="" /> : null}
           <AvatarFallback className="text-lg font-medium">
@@ -116,14 +116,16 @@ export function DossierHero({
               </span>
             ))}
           </div>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight md:text-3xl">
+          <h1 className="mt-2 wrap-break-word text-2xl font-semibold tracking-tight md:text-3xl">
             {title}
           </h1>
           {subtitle ? (
-            <p className="text-muted-foreground mt-1 text-base">{subtitle}</p>
+            <p className="text-muted-foreground mt-1 wrap-break-word text-sm md:text-base">
+              {subtitle}
+            </p>
           ) : null}
           {description ? (
-            <p className="text-foreground/90 mt-3 max-w-prose text-sm leading-relaxed">
+            <p className="text-foreground/90 mt-3 max-w-[72ch] text-sm leading-6 text-balance">
               {description}
             </p>
           ) : null}
@@ -155,7 +157,7 @@ export function DossierHero({
           ) : null}
         </div>
 
-        <div className="flex shrink-0 flex-wrap gap-1">
+        <div className="flex flex-wrap items-center gap-1 md:col-start-2 2xl:col-start-3 2xl:row-start-1 2xl:justify-end **:data-[slot=button]:h-6 **:data-[slot=button]:gap-1 **:data-[slot=button]:px-2 **:data-[slot=button]:text-xs [&_[data-slot=button]>svg]:size-3">
           <SaveButton
             entity={{ kind, id: entityId, title, subtitle }}
             initialSaved={initialSaved}
