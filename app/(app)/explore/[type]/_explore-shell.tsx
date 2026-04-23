@@ -40,7 +40,7 @@ import {
   ROLE_BUCKET_LABELS,
   type RoleBucket,
 } from "@/lib/search/people-roles";
-import type { PeopleFacets } from "@/lib/db/people-facets";
+import type { PeopleFacets } from "@/lib/db/people-facets-shared";
 import { cn } from "@/lib/utils";
 import { ENTITY_HREF } from "@/types/domain";
 

@@ -6,7 +6,7 @@ import { peopleFacetsAction } from "@/app/actions/people-facets";
 import {
   EMPTY_PEOPLE_FACETS,
   type PeopleFacets,
-} from "@/lib/db/people-facets";
+} from "@/lib/db/people-facets-shared";
 import type { RoleBucket } from "@/lib/search/people-roles";
 
 export type UsePeopleFacetsArgs = {

@@ -26,7 +26,7 @@ import {
 import type {
   OrgFacet,
   PeopleFacets,
-} from "@/lib/db/people-facets";
+} from "@/lib/db/people-facets-shared";
 import { cn } from "@/lib/utils";
 
 import { CheckboxGroup, type CheckboxOption } from "./filters/checkbox-group";

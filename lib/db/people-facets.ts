@@ -1,58 +1,26 @@
 import "server-only";
 
-import { z } from "zod";
-
 import { createServerSupabase } from "@/lib/supabase/server";
-import { ROLE_BUCKETS } from "@/lib/search/people-roles";
+
+import {
+  PeopleFacetsSchema,
+  EMPTY_PEOPLE_FACETS,
+} from "./people-facets-shared";
+import type { PeopleFacets, PeopleFacetsArgs } from "./people-facets-shared";
 
 /**
  * Sidebar facet counts for /explore/people. Wraps the
  * `explore_people_facets` RPC and validates its jsonb shape.
  */
 
-const RoleFacetSchema = z.object({
-  value: z.enum(ROLE_BUCKETS),
-  count: z.number(),
-});
-
-const OrgFacetSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  slug: z.string().nullable(),
-  logo_url: z.string().nullable(),
-  count: z.number(),
-});
-
-const TagFacetSchema = z.object({
-  value: z.string(),
-  count: z.number(),
-});
-
-const PeopleFacetsSchema = z.object({
-  role_buckets: z.array(RoleFacetSchema),
-  orgs: z.array(OrgFacetSchema),
-  tags: z.array(TagFacetSchema),
-});
-
-export type RoleFacet = z.infer<typeof RoleFacetSchema>;
-export type OrgFacet = z.infer<typeof OrgFacetSchema>;
-export type TagFacet = z.infer<typeof TagFacetSchema>;
-export type PeopleFacets = z.infer<typeof PeopleFacetsSchema>;
-
-export const EMPTY_PEOPLE_FACETS: PeopleFacets = {
-  role_buckets: [],
-  orgs: [],
-  tags: [],
-};
-
-export type PeopleFacetsArgs = {
-  q?: string;
-  tags?: readonly string[];
-  roleBuckets?: readonly string[];
-  orgIds?: readonly string[];
-  /** Per-facet cap. Defaults to 30 to match the SQL default. */
-  facetLimit?: number;
-};
+export {
+  EMPTY_PEOPLE_FACETS,
+  type PeopleFacets,
+  type PeopleFacetsArgs,
+  type RoleFacet,
+  type OrgFacet,
+  type TagFacet,
+} from "./people-facets-shared";
 
 function clean(input: readonly string[] | undefined): string[] | undefined {
   if (!input || input.length === 0) return undefined;
