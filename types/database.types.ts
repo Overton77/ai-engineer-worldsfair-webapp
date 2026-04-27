@@ -3137,6 +3137,22 @@ export type Database = {
       }
     }
     Functions: {
+      award_xp_event: {
+        Args: {
+          p_kind: string
+          p_metadata?: Json
+          p_points: number
+          p_ref_id: string
+          p_ref_kind: string
+          p_source_attempt?: string
+          p_user_id: string
+        }
+        Returns: {
+          awarded: boolean
+          points: number
+          score_event_id: string
+        }[]
+      }
       backfill_person_primary_org: { Args: never; Returns: number }
       current_streak_days: { Args: { p_user_id: string }; Returns: number }
       explore_libraries: {
