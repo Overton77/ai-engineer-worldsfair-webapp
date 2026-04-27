@@ -1,70 +1,140 @@
 ---
-description: Repo layout for aiengineerapp (Next.js) and root supabase/; route groups, components, types, auth edge, imports, providers, scripts, plans.
+description: Architecture map for aiengineerapp, root supabase, shared app patterns, scripts, and alignment planning docs.
 alwaysApply: true
 ---
 
-# Project architecture
+# Project Architecture
 
-**Workspace:** `aiengineerapp/` is the Next.js 16 app (pnpm). **`supabase/`** at the **repo root** is the Supabase CLI project. `package.json` scripts named `db:*` use `--workdir ..` so they target that folder.
+## Workspace Map
 
-**Imports:** `tsconfig.json` maps `@/*` → `./*` (project root). Prefer `@/app/...`, `@/components/...`, `@/lib/...`, `@/types/...`.
+- `aiengineerapp/` is the production Next.js app. It uses pnpm, React 19, Next 16 App Router, Tailwind 4, Supabase SSR, Radix/shadcn-style UI, TipTap, nuqs, TanStack Query, Vercel AI SDK, Zod, and Vitest.
+- Root `supabase/` is the Supabase CLI project. App `package.json` scripts named `db:*` use `--workdir ..` so they target the root Supabase folder.
+- Root `alignment/` contains planning outputs and agent handoff docs. These are proposed architecture/planning docs, not shipped app code.
+- `aiwiki/` is the vault/content source used by ingestion scripts for course/module/challenge content and other corpus assets.
 
-## `app/` (App Router)
+## Imports And Conventions
+
+- `tsconfig.json` maps `@/*` to the app root. Prefer `@/components/...`, `@/lib/...`, `@/types/...`, and `@/app/...`.
+- Keep route `page.tsx` files thin: fetch in Server Components or call server actions, then compose from `components/`.
+- Put broadly reusable UI in `components/`; route-private heavy client UI may live beside its route as `_*-shell.tsx`.
+- Generated files are not hand-edited. In particular, never manually edit `types/database.types.ts`.
+
+## App Router
 
 | Area | Role |
 |------|------|
-| `(app)/` | Authenticated shell (`(app)/layout.tsx`): left rail, top bar, cmd-K. Product: home, learn, courses, challenges, explore, search, saved, follows, notes, ask, settings. |
-| `(app)/*/[*]` | Entity **dossiers** where `page.tsx` exists — `/p/[slug]`, `/o/[slug]`, `/talk/[slug]`, `/video/[id]`, `/lib/[slug]`, `/paper/[slug]`, `/event/[slug]`. |
-| `(auth)/` | Login (`login-form.tsx`, `actions.ts`), `/auth/callback`, `/logout`. |
-| `(onboarding)/` | `/onboarding/[step]` — wizard driven by `onboarding/steps.ts` + `actions.ts`; step UIs under `_steps/`. |
-| `(marketing)/` | Public `/welcome`. |
-| `app/actions/` | Cross-cutting **Server Actions**: `search.ts`, `explore.ts`, `palette.ts` (cmd-K / command palette). |
-| Root `layout.tsx` | Geist fonts, **`ThemeProvider`** (`next-themes`), **`NuqsAdapter`** (URL query state), **`Toaster`** (`sonner`), metadata. |
-| `globals.css` | Tailwind v4 / design tokens. |
+| `app/layout.tsx` | Global fonts, `ThemeProvider`, `NuqsAdapter`, `Toaster`, metadata. |
+| `app/globals.css` | Tailwind v4 import, OKLCH design tokens, app theme variables. |
+| `app/(app)/` | Authenticated product shell: left rail, top bar, cmd-K, product pages. |
+| `app/(auth)/` | Login, auth callback route handler, logout. |
+| `app/(onboarding)/` | `/onboarding/[step]`, step config, actions, step UI. |
+| `app/(marketing)/` | Public `/welcome`. |
+| `app/actions/` | Cross-cutting server actions: search, explore, palette, save, follow, notes, notifications, people facets, drawer bootstrap. |
 
-**Colocation:** Heavy client UI for a route often lives in a same-folder **`_*-shell.tsx`** (e.g. `_search-shell.tsx`, `_explore-shell.tsx`, `_video-shell.tsx`). Settings forms may sit next to `page.tsx` (e.g. `profile-settings-form.tsx`).
+Authenticated routes currently include home, `/learn`, `/courses`, `/challenges`, `/explore`, `/explore/[type]`, `/search`, `/saved`, `/follows`, `/notes`, `/notes/[id]`, `/ask`, settings, and dossiers.
 
-**URLs vs schema:** `types/domain.ts` → **`ENTITY_HREF`** lists canonical paths for every `EntityKind` (including future surfaces like `/product`, `/repo`). Not all of those routes have a `page.tsx` yet — add a route when you ship that dossier.
+Dossier routes currently include `/p/[slug]`, `/o/[slug]`, `/talk/[slug]`, `/video/[id]`, `/lib/[slug]`, `/paper/[slug]`, and `/event/[slug]`.
 
-**Edge:** `aiengineerapp/proxy.ts` is the Next 16 **Proxy** (session refresh + auth/onboarding redirects). Shared logic: `lib/supabase/middleware.ts`. **RLS** on Supabase + `requireUser()` in server code are the real security boundary; the proxy is UX gating.
+`types/domain.ts` contains `ENTITY_HREF`, the canonical URL map for entity kinds. It includes some future surfaces that do not yet have `page.tsx`; add routes only when shipping those surfaces.
 
-## `components/`
+## Auth, Proxy, And Supabase
+
+- `proxy.ts` is the Next 16 Proxy. It refreshes Supabase sessions and handles auth/onboarding UX redirects.
+- Shared proxy/session logic lives in `lib/supabase/middleware.ts`.
+- `lib/auth/require-user.ts` provides `getOptionalUser` and `requireUser`; server code should use these for authenticated user boundaries.
+- RLS plus server-side `requireUser()` are the security boundary. Proxy redirects are user experience, not authorization.
+
+Supabase clients:
+
+- `lib/supabase/server.ts`: server component/action client using `@supabase/ssr`.
+- `lib/supabase/browser.ts`: browser client.
+- `lib/supabase/admin.ts`: service-role client, server-only.
+- `lib/supabase/env.ts`: env helpers.
+
+## Components
 
 | Folder | Role |
 |--------|------|
-| `ui/` | Primitives from **shadcn** / Radix (`components.json`) — button, dialog, tabs, command, avatar, … |
-| `shell/` | App chrome: rails, top bar, mobile nav, theme, user menu, notifications, assistant toggle, XP/streak, `command-trigger` for cmd-K. |
-| `explore/` | Explore/search: filters, entity cards, result lists, match mode toggle. |
-| `dossier/` | Entity detail: hero, tabs, corpus, relationships, video player, notes placeholder. |
-| `command-palette/` | Cmd-K palette, React context, recent searches. |
-| `wizard/` | Onboarding: chip picker, layer cards, progress dots. |
-| `settings/` | Reusable settings widgets (e.g. avatar upload). |
-| `brand/` | Logo. Root `theme-provider.tsx` wraps `next-themes`. |
+| `components/ui/` | Generic primitives from shadcn/Radix/Base UI patterns: button, card, dialog, tabs, command, avatar, etc. |
+| `components/shell/` | App chrome: rails, top bar, mobile nav, theme, user menu, notifications, assistant toggle, XP/streak, command trigger. |
+| `components/explore/` | Explore/search filters, entity cards, result lists, match mode, active filters. |
+| `components/dossier/` | Entity detail hero, tabs, corpus, relationships, video player, notes placeholders. |
+| `components/notes/` | Notes shells, editors, entity notes panel, mention picker, video notes, quick drawer, draggable PiP. |
+| `components/saves/` | Saved list, rows, toolbar. |
+| `components/save-follow/` | Save, follow, and note buttons for entity actions. |
+| `components/command-palette/` | Cmd-K palette, palette context, recent searches. |
+| `components/wizard/` | Onboarding chip picker, layer cards, progress dots. |
+| `components/settings/` | Reusable settings widgets such as avatar upload. |
+| `components/brand/` | Logo and brand primitives. |
 
-Keep route `page.tsx` files thin: load data in RSC or call server actions; compose from `components/`.
+Planned learner component folders from `alignment/learner-ui-component-assets-architecture.md`: `components/learn`, `components/courses`, `components/modules`, `components/challenges`, and `components/assets`.
 
-## `types/`
+## Library Folders
 
-- **`database.types.ts`** — Generated **`Database`** type for Supabase clients. **Do not edit by hand.** Regenerate: `pnpm db:types` (linked remote project) or `pnpm db:types:local` after DDL changes.
-- **`domain.ts`** — App types: `EntitySummary`, `FilterState`, `SearchAllHit`, `ENTITY_HREF`, re-exports from `lib/schema/entity-kind`.
+| Folder | Role |
+|--------|------|
+| `lib/db/` | Database helpers for entities, summaries, dossiers, notes, saves, follows, notifications, profiles, stats, people facets, save/follow state. Many helpers have Vitest tests. |
+| `lib/search/` | Search and explore logic: `searchAll`, `searchFuzzy`, chunk matching, people roles, shared types. |
+| `lib/notes/` | TipTap note types, text derivation, URL state, entity/timestamp mention extensions. |
+| `lib/hooks/` | Client hooks for explore queries, notes layout, people facets. |
+| `lib/actions/` | Server-side action helpers and schemas, currently including profile update code. |
+| `lib/schema/` | Shared schema constants such as entity kinds and taxonomy. |
+| `lib/retrieval/` | Embedding/retrieval support: embedder, search, filters, types. |
+| `lib/recommender/` | Recommendation helpers such as tag synonyms. |
+| `lib/analytics/` | Analytics entry points. |
+| `lib/env.ts` | App env handling. |
+| `lib/utils.ts` | Shared utilities such as `cn`. |
 
-## `scripts/` (maintenance, not the App Router)
+## Types
 
-One-off **Node/tsx** utilities: entity upserts, backfills, embedding pipelines, SQL helpers. **`tsconfig.json` excludes `scripts/**`** from the main typecheck — run with `tsx` / package scripts as needed. Heavier backfills belong here per **supabase-migrations** guidance.
+- `types/database.types.ts` is generated from Supabase. Do not edit by hand. Regenerate with `pnpm db:types` for the linked project or `pnpm db:types:local` after local DDL changes.
+- `types/domain.ts` defines app domain types such as `EntitySummary`, filter/search hit types, and `ENTITY_HREF`.
 
-## `.cursor/plans/`
+## Scripts And Content Pipeline
 
-Milestone and unit stubs (M0–M8, prereqs), wireframes — **product source of truth** for what is planned vs shipped.
+`scripts/**` contains Node/tsx maintenance and ingestion utilities. `tsconfig.json` excludes `scripts/**` from the main app typecheck, so run scripts with `tsx` or package scripts.
 
-## Root `supabase/`
+Important scripts:
 
-- **`migrations/`**, **`seed.sql`**, **`config.toml`** — local stack and schema history. Workflow: rule **supabase-migrations**.
+- `_shared/vault.ts`: shared vault/content helpers and service Supabase script client.
+- `upsert-modules.ts`, `upsert-courses.ts`, `upsert-challenges.ts`: course/module/challenge content upserts.
+- `publish-bucket.ts`: orchestrates bucket publishing.
+- `upsert-entities.ts`, `upsert-link-tables.ts`, `upsert-chunks.ts`: corpus/entity ingestion.
+- `backfill-search-text-and-embeddings.ts` and other backfills: maintenance jobs.
+- `apply-sql.ts`, `inspect-corpus.ts`, `export-corpus-snapshot.ts`, `smoke-query.ts`: operational helpers.
 
-## Quality / tooling
+Current package shortcuts include `vault:upsert-modules:agent-orchestration`, `vault:upsert-courses:agent-orchestration`, and `vault:upsert:agent-orchestration-skills-mini`.
 
-- **`pnpm typecheck`** — `tsc --noEmit` (app + `lib` + `types`; not `scripts/`).
-- **`pnpm test`** — Vitest; `vitest.server-only-stub.ts` mocks server-only modules in tests.
+## Supabase Project
 
-## Stack (see `package.json`)
+Root `supabase/` contains:
 
-React 19, Next 16, Tailwind 4, Supabase SSR, TanStack Query, **nuqs**, TipTap, Vercel AI SDK / `@ai-sdk/openai`, **framer-motion**, Zod, Vitest.
+- `migrations/`: schema history.
+- `seed.sql`: local seed data.
+- `config.toml`: local Supabase stack config.
+
+Use `pnpm db:migration:new`, `pnpm db:reset`, `pnpm db:diff`, `pnpm db:pull`, and related package scripts from `aiengineerapp/`. Follow Supabase rules: use migrations for committed schema, regenerate types after DDL, and keep RLS enabled for exposed user data.
+
+## Tests And Tooling
+
+- `pnpm typecheck`: `tsc --noEmit` for app/lib/types, excluding scripts.
+- `pnpm lint`: ESLint.
+- `pnpm test`: Vitest.
+- `vitest.config.ts`: jsdom, `vitest.setup.ts`, includes `lib/**/*.test.{ts,tsx}` and `components/**/*.test.{ts,tsx}`.
+- `vitest.server-only-stub.ts`: aliases `server-only` for tests.
+
+## Planning Sources
+
+- `aiengineerapp/.cursor/plans/`: milestone/unit stubs and product wireframes. Useful for planned vs shipped behavior.
+- Root `alignment/learner-courses-challenges-architecture.md`: proposed learner course/module/progress/challenge architecture.
+- Root `alignment/learner-ui-component-assets-architecture.md`: proposed learner UI, component, styling, and asset model.
+- Root `alignment/learner-text-wireframes.md`: proposed ASCII wireframes for learner surfaces.
+- Root `alignment/learner-agent-work-units.md`: proposed branch/work-unit breakdown for agents.
+
+Treat alignment docs as planning guidance. Verify current code before assuming planned learner routes/components already exist.
+
+## Current Learner/Course Status
+
+Existing DB/schema and scripts already model course-related content: `course`, `course_enrollment`, `course_module`, `course_module_in_course`, `course_module_requires`, `course_module_review`, `module_completion`, `module_uses_artifact`, and `challenge`.
+
+Current app routes `/learn`, `/courses`, and `/challenges` exist but are placeholder-level until the learner milestone is implemented. Planned routes include `/modules`, `/modules/[moduleSlug]`, `/courses/[slug]`, `/courses/[courseSlug]/m/[moduleSlug]`, and `/challenges/[slug]`.

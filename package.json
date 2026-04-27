@@ -22,7 +22,10 @@
     "db:migration:new": "npx supabase@latest migration new --workdir ..",
     "db:migration:list": "npx supabase@latest migration list --workdir ..",
     "db:types": "npx supabase@latest gen types typescript --workdir .. --project-id wkythqbofmckbuoothhn --schema public > types/database.types.ts",
-    "db:types:local": "npx supabase@latest gen types typescript --workdir .. --local --schema public > types/database.types.ts"
+    "db:types:local": "npx supabase@latest gen types typescript --workdir .. --local --schema public > types/database.types.ts",
+    "vault:upsert-modules:agent-orchestration": "pnpm exec tsx scripts/upsert-modules.ts --bucket agent_orchestration",
+    "vault:upsert-courses:agent-orchestration": "pnpm exec tsx scripts/upsert-courses.ts --bucket agent_orchestration",
+    "vault:upsert:agent-orchestration-skills-mini": "pnpm run vault:upsert-modules:agent-orchestration && pnpm run vault:upsert-courses:agent-orchestration"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.50",
