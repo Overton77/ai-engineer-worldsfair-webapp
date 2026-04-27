@@ -7,11 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
-  }
   public: {
     Tables: {
       attempt: {
@@ -430,6 +425,84 @@ export type Database = {
           version?: string
         }
         Relationships: []
+      }
+      course_module_completion: {
+        Row: {
+          attempts: number
+          completed_at: string
+          course_id: string
+          course_version: string
+          metadata: Json
+          module_id: string
+          module_version: string
+          quiz_responses: Json
+          quiz_score: number | null
+          time_spent_seconds: number | null
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          completed_at?: string
+          course_id: string
+          course_version: string
+          metadata?: Json
+          module_id: string
+          module_version: string
+          quiz_responses?: Json
+          quiz_score?: number | null
+          time_spent_seconds?: number | null
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          completed_at?: string
+          course_id?: string
+          course_version?: string
+          metadata?: Json
+          module_id?: string
+          module_version?: string
+          quiz_responses?: Json
+          quiz_score?: number | null
+          time_spent_seconds?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_module_completion_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "course"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "course_module_completion_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "course_module"
+            referencedColumns: ["module_id"]
+          },
+          {
+            foreignKeyName: "course_module_completion_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "current_user_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "course_module_completion_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_module_completion_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       course_module_in_course: {
         Row: {
@@ -1079,6 +1152,7 @@ export type Database = {
           attempts: number
           completed_at: string
           module_id: string
+          module_version: string | null
           quiz_responses: Json
           quiz_score: number | null
           time_spent_seconds: number | null
@@ -1088,6 +1162,7 @@ export type Database = {
           attempts?: number
           completed_at?: string
           module_id: string
+          module_version?: string | null
           quiz_responses?: Json
           quiz_score?: number | null
           time_spent_seconds?: number | null
@@ -1097,6 +1172,7 @@ export type Database = {
           attempts?: number
           completed_at?: string
           module_id?: string
+          module_version?: string | null
           quiz_responses?: Json
           quiz_score?: number | null
           time_spent_seconds?: number | null
@@ -3421,3 +3497,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+
