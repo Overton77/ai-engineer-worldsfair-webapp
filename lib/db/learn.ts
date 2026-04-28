@@ -406,7 +406,7 @@ export async function completeStandaloneModule(
 ): Promise<CompleteStandaloneModuleResult> {
   const user = await requireUser();
   const sb = await getClient(client);
-  const module = await getModuleById(moduleId, sb);
+  const courseModule = await getModuleById(moduleId, sb);
   const existingCompletion = await getStandaloneModuleCompletion(
     user.id,
     moduleId,
@@ -420,7 +420,7 @@ export async function completeStandaloneModule(
       {
         user_id: user.id,
         module_id: moduleId,
-        module_version: module.version,
+        module_version: courseModule.version,
         ...completionFields,
       },
       { onConflict: "user_id,module_id" },
@@ -435,7 +435,7 @@ export async function completeStandaloneModule(
     moduleId,
     metadata: mergeMetadata(payload.metadata, {
       completion_context: "standalone",
-      module_version: module.version,
+      module_version: courseModule.version,
       quiz_score: completion.quiz_score,
     }),
   });
@@ -451,7 +451,7 @@ export async function completeCourseModule(
 ): Promise<CompleteCourseModuleResult> {
   const user = await requireUser();
   const sb = await getClient(client);
-  const [course, module, enrollment, membership] = await Promise.all([
+  const [course, courseModule, enrollment, membership] = await Promise.all([
     getCourseById(courseId, sb),
     getModuleById(moduleId, sb),
     getEnrollment(user.id, courseId, sb),
@@ -482,7 +482,7 @@ export async function completeCourseModule(
     },
     {
       course_version: course.version,
-      module_version: module.version,
+      module_version: courseModule.version,
     },
   );
 
@@ -494,7 +494,7 @@ export async function completeCourseModule(
         course_id: courseId,
         module_id: moduleId,
         course_version: course.version,
-        module_version: module.version,
+        module_version: courseModule.version,
         metadata: completionMetadata as Json,
         ...completionFields,
       },
@@ -512,7 +512,7 @@ export async function completeCourseModule(
       completion_context: "course",
       course_id: courseId,
       course_version: course.version,
-      module_version: module.version,
+      module_version: courseModule.version,
       quiz_score: completion.quiz_score,
     }),
   });

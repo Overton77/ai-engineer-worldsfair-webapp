@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { requireUser } from "@/lib/auth/require-user";
 import { deleteSave, insertSave } from "@/lib/db/saves";
+import { emitEntityInteractionEvent } from "@/lib/recommendations/events";
 import { EntityKindSchema } from "@/lib/schema/entity-kind";
 
 export type SaveActionResult =
@@ -47,6 +48,11 @@ export async function toggleSaveAction(
       entity_subtitle: subtitle ?? null,
     });
     if (!row) return { ok: false, error: "Failed to save" };
+    await emitEntityInteractionEvent({
+      userId: user.id,
+      type: "entity.saved",
+      entity: { kind, id, title, subtitle: subtitle ?? null },
+    });
     revalidatePath("/saved");
     return { ok: true, state: "saved", at };
   }
@@ -54,6 +60,11 @@ export async function toggleSaveAction(
   if (intent === "unsaved") {
     const ok = await deleteSave({ userId: user.id, kind, id });
     if (!ok) return { ok: false, error: "Failed to unsave" };
+    await emitEntityInteractionEvent({
+      userId: user.id,
+      type: "entity.unsaved",
+      entity: { kind, id, title, subtitle: subtitle ?? null },
+    });
     revalidatePath("/saved");
     return { ok: true, state: "unsaved", at };
   }
@@ -68,6 +79,11 @@ export async function toggleSaveAction(
     // intent-aware path. This branch is reached only when intent is
     // omitted; production callers always pass intent for predictable
     // optimistic UI.
+    await emitEntityInteractionEvent({
+      userId: user.id,
+      type: "entity.unsaved",
+      entity: { kind, id, title, subtitle: subtitle ?? null },
+    });
     revalidatePath("/saved");
     return { ok: true, state: "unsaved", at };
   }
@@ -80,6 +96,11 @@ export async function toggleSaveAction(
     entity_subtitle: subtitle ?? null,
   });
   if (!row) return { ok: false, error: "Failed to save" };
+  await emitEntityInteractionEvent({
+    userId: user.id,
+    type: "entity.saved",
+    entity: { kind, id, title, subtitle: subtitle ?? null },
+  });
   revalidatePath("/saved");
   return { ok: true, state: "saved", at };
 }

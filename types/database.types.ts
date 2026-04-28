@@ -638,6 +638,79 @@ export type Database = {
           },
         ]
       }
+      entity_interaction_event: {
+        Row: {
+          attempt_count: number
+          entity_id: string
+          entity_kind: string
+          entity_subtitle: string | null
+          entity_title: string | null
+          error: string | null
+          event_id: string
+          event_type: string
+          metadata: Json
+          occurred_at: string
+          processed_at: string | null
+          queued_at: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          attempt_count?: number
+          entity_id: string
+          entity_kind: string
+          entity_subtitle?: string | null
+          entity_title?: string | null
+          error?: string | null
+          event_id?: string
+          event_type: string
+          metadata?: Json
+          occurred_at?: string
+          processed_at?: string | null
+          queued_at?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          attempt_count?: number
+          entity_id?: string
+          entity_kind?: string
+          entity_subtitle?: string | null
+          entity_title?: string | null
+          error?: string | null
+          event_id?: string
+          event_type?: string
+          metadata?: Json
+          occurred_at?: string
+          processed_at?: string | null
+          queued_at?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_interaction_event_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "current_user_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "entity_interaction_event_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_interaction_event_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event: {
         Row: {
           agenda_url: string | null
@@ -3013,6 +3086,79 @@ export type Database = {
           },
         ]
       }
+      user_entity_recommendation: {
+        Row: {
+          algorithm_version: string
+          computed_at: string
+          entity_id: string
+          entity_kind: string
+          expires_at: string | null
+          href: string
+          image_url: string | null
+          metadata: Json
+          rank: number
+          reason_codes: string[]
+          score: number
+          subtitle: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          algorithm_version: string
+          computed_at?: string
+          entity_id: string
+          entity_kind: string
+          expires_at?: string | null
+          href: string
+          image_url?: string | null
+          metadata?: Json
+          rank: number
+          reason_codes?: string[]
+          score: number
+          subtitle?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          algorithm_version?: string
+          computed_at?: string
+          entity_id?: string
+          entity_kind?: string
+          expires_at?: string | null
+          href?: string
+          image_url?: string | null
+          metadata?: Json
+          rank?: number
+          reason_codes?: string[]
+          score?: number
+          subtitle?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_entity_recommendation_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "current_user_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "user_entity_recommendation_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_entity_recommendation_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       youtube_channel: {
         Row: {
           channel_id: string
@@ -3428,6 +3574,10 @@ export type Database = {
           source_id: string
           source_kind: string
         }[]
+      }
+      replace_user_entity_recommendations: {
+        Args: { p_rows: Json; p_user_id: string }
+        Returns: number
       }
       search_all: {
         Args: { kinds?: string[]; limit_count?: number; q: string }
