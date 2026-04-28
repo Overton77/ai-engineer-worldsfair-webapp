@@ -14,7 +14,13 @@ import { copyCookies, refreshSession } from "@/lib/supabase/middleware";
  */
 
 const PUBLIC_PATHS = new Set<string>(["/welcome", "/login", "/logout"]);
-const PUBLIC_PREFIXES = ["/auth/"];
+const PUBLIC_PREFIXES = [
+  "/auth/",
+  // Vercel Queues authenticates callbacks separately; these requests do not
+  // carry Supabase browser cookies during local priming or production delivery.
+  "/api/queues/",
+  "/api/admin/recommendations/drain",
+];
 
 function isPublic(pathname: string): boolean {
   if (PUBLIC_PATHS.has(pathname)) return true;
