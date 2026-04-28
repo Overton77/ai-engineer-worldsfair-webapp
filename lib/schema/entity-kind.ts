@@ -80,6 +80,7 @@ export const ARTIFACT_KINDS = [
   "chunk",
   "doc_page",
   "web_article",
+  "learning_asset",
 ] as const;
 
 export type ArtifactKind = (typeof ARTIFACT_KINDS)[number];

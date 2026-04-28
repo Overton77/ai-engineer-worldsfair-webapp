@@ -911,6 +911,78 @@ export type Database = {
           },
         ]
       }
+      learning_asset: {
+        Row: {
+          asset_id: string
+          asset_kind: string
+          bucket: string | null
+          checksum_sha256: string | null
+          created_at: string
+          description: string | null
+          external_url: string | null
+          extracted_text: string | null
+          extraction_error: string | null
+          extraction_status: string
+          file_size_bytes: number | null
+          metadata: Json
+          mime_type: string | null
+          preview_url: string | null
+          provider: string
+          slug: string
+          source_path: string | null
+          storage_path: string | null
+          text_extracted_at: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          asset_id?: string
+          asset_kind: string
+          bucket?: string | null
+          checksum_sha256?: string | null
+          created_at?: string
+          description?: string | null
+          external_url?: string | null
+          extracted_text?: string | null
+          extraction_error?: string | null
+          extraction_status?: string
+          file_size_bytes?: number | null
+          metadata?: Json
+          mime_type?: string | null
+          preview_url?: string | null
+          provider: string
+          slug: string
+          source_path?: string | null
+          storage_path?: string | null
+          text_extracted_at?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          asset_id?: string
+          asset_kind?: string
+          bucket?: string | null
+          checksum_sha256?: string | null
+          created_at?: string
+          description?: string | null
+          external_url?: string | null
+          extracted_text?: string | null
+          extraction_error?: string | null
+          extraction_status?: string
+          file_size_bytes?: number | null
+          metadata?: Json
+          mime_type?: string | null
+          preview_url?: string | null
+          provider?: string
+          slug?: string
+          source_path?: string | null
+          storage_path?: string | null
+          text_extracted_at?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       library: {
         Row: {
           category: string | null
