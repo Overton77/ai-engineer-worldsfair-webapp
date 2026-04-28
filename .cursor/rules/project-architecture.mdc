@@ -1,6 +1,5 @@
 ---
-description: Architecture map for aiengineerapp, root supabase, shared app patterns, scripts, and alignment planning docs.
-alwaysApply: true
+alwaysApply: false
 ---
 
 # Project Architecture
@@ -21,15 +20,15 @@ alwaysApply: true
 
 ## App Router
 
-| Area | Role |
-|------|------|
-| `app/layout.tsx` | Global fonts, `ThemeProvider`, `NuqsAdapter`, `Toaster`, metadata. |
-| `app/globals.css` | Tailwind v4 import, OKLCH design tokens, app theme variables. |
-| `app/(app)/` | Authenticated product shell: left rail, top bar, cmd-K, product pages. |
-| `app/(auth)/` | Login, auth callback route handler, logout. |
-| `app/(onboarding)/` | `/onboarding/[step]`, step config, actions, step UI. |
-| `app/(marketing)/` | Public `/welcome`. |
-| `app/actions/` | Cross-cutting server actions: search, explore, palette, save, follow, notes, notifications, people facets, drawer bootstrap. |
+| Area                | Role                                                                                                                         |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `app/layout.tsx`    | Global fonts, `ThemeProvider`, `NuqsAdapter`, `Toaster`, metadata.                                                           |
+| `app/globals.css`   | Tailwind v4 import, OKLCH design tokens, app theme variables.                                                                |
+| `app/(app)/`        | Authenticated product shell: left rail, top bar, cmd-K, product pages.                                                       |
+| `app/(auth)/`       | Login, auth callback route handler, logout.                                                                                  |
+| `app/(onboarding)/` | `/onboarding/[step]`, step config, actions, step UI.                                                                         |
+| `app/(marketing)/`  | Public `/welcome`.                                                                                                           |
+| `app/actions/`      | Cross-cutting server actions: search, explore, palette, save, follow, notes, notifications, people facets, drawer bootstrap. |
 
 Authenticated routes currently include home, `/learn`, `/courses`, `/challenges`, `/explore`, `/explore/[type]`, `/search`, `/saved`, `/follows`, `/notes`, `/notes/[id]`, `/ask`, settings, and dossiers.
 
@@ -53,37 +52,44 @@ Supabase clients:
 
 ## Components
 
-| Folder | Role |
-|--------|------|
-| `components/ui/` | Generic primitives from shadcn/Radix/Base UI patterns: button, card, dialog, tabs, command, avatar, etc. |
-| `components/shell/` | App chrome: rails, top bar, mobile nav, theme, user menu, notifications, assistant toggle, XP/streak, command trigger. |
-| `components/explore/` | Explore/search filters, entity cards, result lists, match mode, active filters. |
-| `components/dossier/` | Entity detail hero, tabs, corpus, relationships, video player, notes placeholders. |
-| `components/notes/` | Notes shells, editors, entity notes panel, mention picker, video notes, quick drawer, draggable PiP. |
-| `components/saves/` | Saved list, rows, toolbar. |
-| `components/save-follow/` | Save, follow, and note buttons for entity actions. |
-| `components/command-palette/` | Cmd-K palette, palette context, recent searches. |
-| `components/wizard/` | Onboarding chip picker, layer cards, progress dots. |
-| `components/settings/` | Reusable settings widgets such as avatar upload. |
-| `components/brand/` | Logo and brand primitives. |
+| Folder                        | Role                                                                                                                   |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `components/ui/`              | Generic primitives from shadcn/Radix/Base UI patterns: button, card, dialog, tabs, command, avatar, etc.               |
+| `components/shell/`           | App chrome: rails, top bar, mobile nav, theme, user menu, notifications, assistant toggle, XP/streak, command trigger. |
+| `components/explore/`         | Explore/search filters, entity cards, result lists, match mode, active filters.                                        |
+| `components/dossier/`         | Entity detail hero, tabs, corpus, relationships, video player, notes placeholders.                                     |
+| `components/notes/`           | Notes shells, editors, entity notes panel, mention picker, video notes, quick drawer, draggable PiP.                   |
+| `components/saves/`           | Saved list, rows, toolbar.                                                                                             |
+| `components/save-follow/`     | Save, follow, and note buttons for entity actions.                                                                     |
+| `components/command-palette/` | Cmd-K palette, palette context, recent searches.                                                                       |
+| `components/wizard/`          | Onboarding chip picker, layer cards, progress dots.                                                                    |
+| `components/settings/`        | Reusable settings widgets such as avatar upload.                                                                       |
+| `components/brand/`           | Logo and brand primitives.                                                                                             |
 
-Planned learner component folders from `alignment/learner-ui-component-assets-architecture.md`: `components/learn`, `components/courses`, `components/modules`, `components/challenges`, and `components/assets`.
+Learner component folders from `alignment/learner-agent-work-units.md` Unit 07 are still pending: `components/learn`, `components/courses`, `components/modules`, `components/challenges`, and `components/assets`.
 
 ## Library Folders
 
-| Folder | Role |
-|--------|------|
-| `lib/db/` | Database helpers for entities, summaries, dossiers, notes, saves, follows, notifications, profiles, stats, people facets, save/follow state. Many helpers have Vitest tests. |
-| `lib/search/` | Search and explore logic: `searchAll`, `searchFuzzy`, chunk matching, people roles, shared types. |
-| `lib/notes/` | TipTap note types, text derivation, URL state, entity/timestamp mention extensions. |
-| `lib/hooks/` | Client hooks for explore queries, notes layout, people facets. |
-| `lib/actions/` | Server-side action helpers and schemas, currently including profile update code. |
-| `lib/schema/` | Shared schema constants such as entity kinds and taxonomy. |
-| `lib/retrieval/` | Embedding/retrieval support: embedder, search, filters, types. |
-| `lib/recommender/` | Recommendation helpers such as tag synonyms. |
-| `lib/analytics/` | Analytics entry points. |
-| `lib/env.ts` | App env handling. |
-| `lib/utils.ts` | Shared utilities such as `cn`. |
+| Folder             | Role                                                                                                                                                                         |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `lib/db/`          | Database helpers for entities, summaries, dossiers, notes, saves, follows, notifications, profiles, stats, people facets, save/follow state. Many helpers have Vitest tests. |
+| `lib/search/`      | Search and explore logic: `searchAll`, `searchFuzzy`, chunk matching, people roles, shared types.                                                                            |
+| `lib/notes/`       | TipTap note types, text derivation, URL state, entity/timestamp mention extensions.                                                                                          |
+| `lib/hooks/`       | Client hooks for explore queries, notes layout, people facets.                                                                                                               |
+| `lib/actions/`     | Server-side action helpers and schemas, currently including profile update code.                                                                                             |
+| `lib/schema/`      | Shared schema constants such as entity kinds and taxonomy.                                                                                                                   |
+| `lib/retrieval/`   | Embedding/retrieval support: embedder, search, filters, types.                                                                                                               |
+| `lib/recommender/` | Recommendation helpers such as tag synonyms.                                                                                                                                 |
+| `lib/analytics/`   | Analytics entry points.                                                                                                                                                      |
+| `lib/env.ts`       | App env handling.                                                                                                                                                            |
+| `lib/utils.ts`     | Shared utilities such as `cn`.                                                                                                                                               |
+
+Learner-specific server helpers now live in:
+
+- `lib/db/xp.ts`: server-only XP award helper backed by the `award_xp_event` RPC.
+- `lib/db/learn.ts`: server-only learner reads and progress mutations for courses, modules, challenges, enrollments, standalone module completion, course-scoped module completion, progress cache recomputation, and XP integration.
+- `lib/learn/content-immutability.ts`: pure semantic diff helpers used by vault upsert scripts to block same-version drift on published learner content.
+- `lib/learn/learning-assets.ts`: vault asset declaration parsing, path safety, storage path derivation, file inspection/checksum, and text-only extraction helpers.
 
 ## Types
 
@@ -105,6 +111,13 @@ Important scripts:
 
 Current package shortcuts include `vault:upsert-modules:agent-orchestration`, `vault:upsert-courses:agent-orchestration`, and `vault:upsert:agent-orchestration-skills-mini`.
 
+Learner content publishing rules:
+
+- Published same-version course/module semantic drift must fail and tell authors to bump `version`.
+- Published modules/courses are staged as `review` while links/composition are refreshed, then finalized as `published`.
+- Module upsert parses `assets:` frontmatter, uploads owned files to the private `learning-assets` Supabase Storage bucket, extracts text for text-like assets, upserts `learning_asset`, and links rows through `module_uses_artifact` with `artifact_kind = 'learning_asset'`.
+- Required asset extraction failures block publish; non-required extraction failures warn and continue.
+
 ## Supabase Project
 
 Root `supabase/` contains:
@@ -114,6 +127,14 @@ Root `supabase/` contains:
 - `config.toml`: local Supabase stack config.
 
 Use `pnpm db:migration:new`, `pnpm db:reset`, `pnpm db:diff`, `pnpm db:pull`, and related package scripts from `aiengineerapp/`. Follow Supabase rules: use migrations for committed schema, regenerate types after DDL, and keep RLS enabled for exposed user data.
+
+Recent learner migrations added:
+
+- `20260404000000_core_content_baseline.sql`: local baseline needed by the checked-in content migrations.
+- `20260427160000_learner_unit_01_progress_schema.sql`: `course_module_completion`, `module_completion.module_version`, indexes, and owner RLS.
+- `20260427203300_learner_unit_02_xp_awards.sql`: service-role-only `award_xp_event` RPC for idempotent XP awards and atomic `profiles.xp_total` increments.
+- `20260427233600_learner_unit_04_content_immutability.sql`: database triggers that block semantic mutation/deletion of published course/module rows and their published composition/prerequisite/artifact links.
+- `20260428001553_learner_unit_05_06_vault_assets.sql`: `learning_asset`, private `learning-assets` bucket, published-module-scoped asset/object read policies, `module_uses_artifact` support for `learning_asset`, and immutability for assets linked from published modules.
 
 ## Tests And Tooling
 
@@ -137,4 +158,15 @@ Treat alignment docs as planning guidance. Verify current code before assuming p
 
 Existing DB/schema and scripts already model course-related content: `course`, `course_enrollment`, `course_module`, `course_module_in_course`, `course_module_requires`, `course_module_review`, `module_completion`, `module_uses_artifact`, and `challenge`.
 
-Current app routes `/learn`, `/courses`, and `/challenges` exist but are placeholder-level until the learner milestone is implemented. Planned routes include `/modules`, `/modules/[moduleSlug]`, `/courses/[slug]`, `/courses/[courseSlug]/m/[moduleSlug]`, and `/challenges/[slug]`.
+Learner Units 00-06 are complete or documented:
+
+- Unit 00 documented the baseline: `/learn`, `/courses`, and `/challenges` are placeholder-level; dynamic learner route trees and learner component folders were not present.
+- Unit 01 added course-scoped module completion and standalone module version auditing.
+- Unit 02 added idempotent module/course XP awards.
+- Unit 03 added the typed server-only learner data layer. Course-context completion remains separate from standalone completion, and `course_enrollment.progress` is treated as a derived cache.
+- Unit 04 added published content immutability at both the database trigger layer and the vault upsert script layer.
+- Units 05/06 added first-class learning assets, Supabase Storage-backed vault asset publishing, and `learning_asset` artifact links.
+
+Current app routes `/learn`, `/courses`, and `/challenges` still exist but remain placeholder-level until UI route units land. Planned routes include `/modules`, `/modules/[moduleSlug]`, `/courses/[slug]`, `/courses/[courseSlug]/m/[moduleSlug]`, and `/challenges/[slug]`.
+
+Remaining formal learner units are 07-15: shared learner components, learn hub/catalog routes, course detail/enrollment UI, module reader shell, quiz/completion actions, asset rendering/private URLs, read-only challenge detail, route polish/states, and integration/E2E coverage.
