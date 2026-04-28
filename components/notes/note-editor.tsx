@@ -104,9 +104,13 @@ export const NoteEditor = React.forwardRef<NoteEditorHandle, NoteEditorProps>(
     const [pendingSave, setPendingSave] = React.useState(false);
 
     const titleRef = React.useRef(title);
-    titleRef.current = title;
     const pinRef = React.useRef(pin);
-    pinRef.current = pin;
+    React.useEffect(() => {
+      titleRef.current = title;
+    }, [title]);
+    React.useEffect(() => {
+      pinRef.current = pin;
+    }, [pin]);
 
     // ─── Mention suggestion plumbing ─────────────────────────────
     const pickerHandleRef = React.useRef<MentionPickerHandle | null>(null);
@@ -123,9 +127,6 @@ export const NoteEditor = React.forwardRef<NoteEditorHandle, NoteEditorProps>(
       rect: null,
       onSelect: null,
     });
-    const mentionStateRef = React.useRef(mentionState);
-    mentionStateRef.current = mentionState;
-
     // ─── Editor instance ─────────────────────────────────────────
     const editor = useEditor({
       immediatelyRender: false,
@@ -161,7 +162,7 @@ export const NoteEditor = React.forwardRef<NoteEditorHandle, NoteEditorProps>(
                 imageUrl: h.imageUrl,
               }));
             },
-            mentionRender(pickerHandleRef, setMentionState, mentionStateRef),
+            mentionRender(setMentionState),
           ),
         }),
       ],
@@ -391,29 +392,20 @@ function relTime(iso: string): string {
   return `${h}h ago`;
 }
 
-function Toolbar({
-  editor,
-  compact,
-  onInsertTimestamp,
+function ToolButton({
+  children,
+  onClick,
+  label,
+  active,
+  disabled,
 }: {
-  editor: ReturnType<typeof useEditor> | null;
-  compact: boolean;
-  onInsertTimestamp: (() => void) | null;
+  children: React.ReactNode;
+  onClick: () => void;
+  label: string;
+  active?: boolean;
+  disabled?: boolean;
 }) {
-  if (!editor) return null;
-  const ToolBtn = ({
-    children,
-    onClick,
-    label,
-    active,
-    disabled,
-  }: {
-    children: React.ReactNode;
-    onClick: () => void;
-    label: string;
-    active?: boolean;
-    disabled?: boolean;
-  }) => (
+  return (
     <Button
       type="button"
       size="xs"
@@ -426,66 +418,78 @@ function Toolbar({
       {children}
     </Button>
   );
+}
+
+function Toolbar({
+  editor,
+  compact,
+  onInsertTimestamp,
+}: {
+  editor: ReturnType<typeof useEditor> | null;
+  compact: boolean;
+  onInsertTimestamp: (() => void) | null;
+}) {
+  if (!editor) return null;
 
   return (
     <div className={cn("flex flex-wrap items-center gap-0.5", compact && "gap-0")}>
-      <ToolBtn
+      <ToolButton
         label="Bold"
         onClick={() => editor.chain().focus().toggleBold().run()}
         active={editor.isActive("bold")}
       >
         <Bold className="size-3" />
-      </ToolBtn>
-      <ToolBtn
+      </ToolButton>
+      <ToolButton
         label="Italic"
         onClick={() => editor.chain().focus().toggleItalic().run()}
         active={editor.isActive("italic")}
       >
         <Italic className="size-3" />
-      </ToolBtn>
-      <ToolBtn
+      </ToolButton>
+      <ToolButton
         label="Heading"
         onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
         active={editor.isActive("heading", { level: 2 })}
       >
         <Heading2 className="size-3" />
-      </ToolBtn>
-      <ToolBtn
+      </ToolButton>
+      <ToolButton
         label="Bullet list"
         onClick={() => editor.chain().focus().toggleBulletList().run()}
         active={editor.isActive("bulletList")}
       >
         <List className="size-3" />
-      </ToolBtn>
-      <ToolBtn
+      </ToolButton>
+      <ToolButton
         label="Numbered list"
         onClick={() => editor.chain().focus().toggleOrderedList().run()}
         active={editor.isActive("orderedList")}
       >
         <ListOrdered className="size-3" />
-      </ToolBtn>
-      <ToolBtn
+      </ToolButton>
+      <ToolButton
         label="Task list"
         onClick={() => editor.chain().focus().toggleTaskList().run()}
         active={editor.isActive("taskList")}
       >
         <ListChecks className="size-3" />
-      </ToolBtn>
-      <ToolBtn
+      </ToolButton>
+      <ToolButton
         label="Code block"
         onClick={() => editor.chain().focus().toggleCodeBlock().run()}
         active={editor.isActive("codeBlock")}
       >
         <Code className="size-3" />
-      </ToolBtn>
-      <ToolBtn
+      </ToolButton>
+      <ToolButton
         label="Quote"
         onClick={() => editor.chain().focus().toggleBlockquote().run()}
         active={editor.isActive("blockquote")}
       >
         <Quote className="size-3" />
-      </ToolBtn>
-      <ToolBtn
+      </ToolButton>
+      <ToolButton
         label="Insert link"
         onClick={() => {
           const href = window.prompt("Link URL");
@@ -494,20 +498,20 @@ function Toolbar({
         }}
       >
         <LinkIcon className="size-3" />
-      </ToolBtn>
-      <ToolBtn
+      </ToolButton>
+      <ToolButton
         label="Insert mention"
         onClick={() => editor.chain().focus().insertContent("@").run()}
       >
         <Pencil className="size-3" />
-      </ToolBtn>
+      </ToolButton>
       {onInsertTimestamp ? (
-        <ToolBtn
+        <ToolButton
           label="Insert timestamp (⌘⇧K)"
           onClick={onInsertTimestamp}
         >
           <Timer className="size-3" />
-        </ToolBtn>
+        </ToolButton>
       ) : null}
     </div>
   );
@@ -530,7 +534,6 @@ type SuggestionRender = () => {
 };
 
 function mentionRender(
-  pickerRef: React.MutableRefObject<MentionPickerHandle | null>,
   setMentionState: React.Dispatch<
     React.SetStateAction<{
       open: boolean;
@@ -540,13 +543,6 @@ function mentionRender(
       onSelect: ((item: EntityMentionItem) => void) | null;
     }>
   >,
-  mentionStateRef: React.MutableRefObject<{
-    open: boolean;
-    query: string;
-    items: EntityMentionItem[];
-    rect: { top: number; left: number; bottom: number } | null;
-    onSelect: ((item: EntityMentionItem) => void) | null;
-  }>,
 ): SuggestionRender {
   return () => {
     let onSelect: ((item: EntityMentionItem) => void) | null = null;
@@ -573,7 +569,7 @@ function mentionRender(
           setMentionState((s) => ({ ...s, open: false, rect: null, items: [] }));
           return false;
         }
-        return pickerRef.current?.onKeyDown(event) ?? false;
+        return false;
       },
       onExit: () => {
         onSelect = null;

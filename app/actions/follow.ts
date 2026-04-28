@@ -6,6 +6,7 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth/require-user";
 import { deleteFollow, insertFollow } from "@/lib/db/follows";
 import { insertNotification } from "@/lib/db/notifications";
+import { emitEntityInteractionEvent } from "@/lib/recommendations/events";
 import { FollowEntityKindSchema } from "@/lib/schema/entity-kind";
 
 export type FollowActionResult =
@@ -46,6 +47,11 @@ export async function toggleFollowAction(
       title,
       url: url ?? null,
     });
+    await emitEntityInteractionEvent({
+      userId: user.id,
+      type: "entity.followed",
+      entity: { kind, id, title },
+    });
     revalidatePath("/follows");
     return { ok: true, state: "following", at };
   }
@@ -53,6 +59,11 @@ export async function toggleFollowAction(
   if (intent === "unfollow") {
     const ok = await deleteFollow({ userId: user.id, kind, id });
     if (!ok) return { ok: false, error: "Failed to unfollow" };
+    await emitEntityInteractionEvent({
+      userId: user.id,
+      type: "entity.unfollowed",
+      entity: { kind, id, title },
+    });
     revalidatePath("/follows");
     return { ok: true, state: "unfollowed", at };
   }
@@ -61,6 +72,11 @@ export async function toggleFollowAction(
   // are encouraged to pass `intent` for clean optimistic UI.
   const removed = await deleteFollow({ userId: user.id, kind, id });
   if (removed) {
+    await emitEntityInteractionEvent({
+      userId: user.id,
+      type: "entity.unfollowed",
+      entity: { kind, id, title },
+    });
     revalidatePath("/follows");
     return { ok: true, state: "unfollowed", at };
   }
@@ -77,6 +93,11 @@ export async function toggleFollowAction(
     id,
     title,
     url: url ?? null,
+  });
+  await emitEntityInteractionEvent({
+    userId: user.id,
+    type: "entity.followed",
+    entity: { kind, id, title },
   });
   revalidatePath("/follows");
   return { ok: true, state: "following", at };

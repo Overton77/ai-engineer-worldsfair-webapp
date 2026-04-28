@@ -1,0 +1,53 @@
+---
+description: Updated Supabase migration workflow for local files, local Docker, and the divergent hosted project.
+globs: supabase/migrations/**/*.sql, supabase/config.toml, aiengineerapp/package.json, aiengineerapp/types/database.types.ts
+alwaysApply: false
+---
+
+# Supabase Updated Migration Workflow
+
+This rule supersedes `supabase-migrations.mdc` if the two disagree.
+
+Project facts:
+
+- Hosted Supabase project: `wkythqbofmckbuoothhn` / `supabase-blue-ocean`.
+- Root `supabase/` is the Supabase CLI project.
+- `aiengineerapp/package.json` `db:*` scripts use `--workdir ..`, so run them from `aiengineerapp/`.
+- Local Supabase runs in Docker and is for local database testing/syncing, not for creating migration filenames.
+- Local and remote migration histories are currently divergent; do not use plain `db push` against the hosted project.
+
+## Creating Migration Files
+
+Create migration files through the CLI, then edit the generated SQL file:
+
+```bash
+cd aiengineerapp
+pnpm run db:migration:new descriptive_snake_name
+```
+
+The scripts must use `npx --yes supabase@latest` so npm does not hang waiting for package-install confirmation. Do not leave zero-byte duplicate migration stubs behind; keep one intended file and delete accidental empty duplicates.
+
+## Local Validation
+
+Use local Docker for testing migrations before remote apply:
+
+```bash
+cd aiengineerapp
+pnpm run db:start
+npx --yes supabase@latest db push --local --dry-run --workdir ..
+npx --yes supabase@latest db push --local --workdir ..
+```
+
+Use `pnpm run db:reset` only when intentionally rebuilding the local database from all migrations and seed data.
+
+## Hosted Project Apply
+
+Because migration history is divergent, do not run plain `pnpm run db:push` to remote. Apply reviewed SQL to the hosted project through the Supabase MCP/trusted remote migration path, then verify with migration listing/advisors.
+
+After any DDL change, regenerate types from `aiengineerapp/`:
+
+```bash
+pnpm run db:types
+```
+
+Never manually edit `types/database.types.ts`.
