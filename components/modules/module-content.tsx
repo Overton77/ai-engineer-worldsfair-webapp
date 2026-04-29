@@ -2,6 +2,8 @@ import Link from "next/link";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+import { ModuleCompletionActions } from "@/components/modules/module-completion-actions";
+import { ModuleQuiz } from "@/components/modules/module-quiz";
 import { ModuleProse } from "@/components/modules/module-prose";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -15,12 +17,21 @@ import type {
   CourseModuleRow,
   ModuleCompletionRow,
 } from "@/lib/db/learn";
+import type {
+  CourseModuleCompletionActionInput,
+  ModuleCompletionActionInput,
+  ModuleCompletionActionResult,
+} from "@/lib/learn/module-completion-actions";
+import {
+  formatQuizPercent,
+  getPassThreshold,
+  miniQuizViewModel,
+} from "@/lib/learn/module-quiz";
 
 import {
   compactLabel,
   formatDomain,
   formatMinutes,
-  hasQuiz,
   headingId,
   jsonStrings,
   moduleXp,
@@ -30,18 +41,36 @@ type ModuleContentProps = {
   module: CourseModuleRow;
   contextLabel: string;
   completion?: ModuleCompletionRow | CourseModuleCompletionRow | null;
+  actionInput: ModuleCompletionActionInput | CourseModuleCompletionActionInput;
+  quizAction: (
+    input: ModuleCompletionActionInput | CourseModuleCompletionActionInput,
+  ) => Promise<ModuleCompletionActionResult>;
+  markCompleteAction: (
+    input: ModuleCompletionActionInput | CourseModuleCompletionActionInput,
+  ) => Promise<ModuleCompletionActionResult>;
 };
 
 export function ModuleContent({
   module,
   contextLabel,
   completion = null,
+  actionInput,
+  quizAction,
+  markCompleteAction,
 }: ModuleContentProps) {
   const objectives = jsonStrings(module.learning_objectives);
+  const quizQuestions = miniQuizViewModel(module.mini_quiz);
+  const quizThreshold = getPassThreshold({
+    miniQuiz: module.mini_quiz,
+    metadata: module.metadata,
+  });
+  const quizScoreLabel = completion?.quiz_score != null
+    ? `Score ${formatQuizPercent(completion.quiz_score)}`
+    : null;
   const metadataLabel = compactLabel([
     formatDomain(module.difficulty),
     formatMinutes(module.duration_min),
-    hasQuiz(module.mini_quiz) ? "Quiz" : undefined,
+    quizQuestions.length > 0 ? "Quiz" : undefined,
     `+${moduleXp(module.metadata)} XP`,
   ]);
 
@@ -64,6 +93,7 @@ export function ModuleContent({
           <Badge variant="secondary">Published v{module.version}</Badge>
           <Badge variant="outline">{formatDomain(module.body_kind) ?? module.body_kind}</Badge>
           {completion ? <Badge variant="secondary">Completed</Badge> : null}
+          {quizScoreLabel ? <Badge variant="outline">{quizScoreLabel}</Badge> : null}
         </div>
 
         {objectives.length > 0 ? (
@@ -142,23 +172,23 @@ export function ModuleContent({
         </Markdown>
       </ModuleProse>
 
-      {hasQuiz(module.mini_quiz) ? (
-        <Card className="border-border/60">
-          <CardHeader>
-            <CardTitle>Mini-quiz</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <p className="text-sm">
-              This module includes a mini-quiz. Submission and completion writes
-              are handled in the next unit.
-            </p>
-            <p className="text-muted-foreground text-xs">
-              For now, the lesson content and context remain available as a
-              read-only reader.
-            </p>
-          </CardContent>
-        </Card>
-      ) : null}
+      {quizQuestions.length > 0 ? (
+        <ModuleQuiz
+          questions={quizQuestions}
+          threshold={quizThreshold}
+          actionInput={actionInput}
+          action={quizAction}
+          completed={Boolean(completion)}
+          score={completion?.quiz_score}
+          attempts={completion?.attempts}
+        />
+      ) : (
+        <ModuleCompletionActions
+          actionInput={actionInput}
+          action={markCompleteAction}
+          completed={Boolean(completion)}
+        />
+      )}
     </main>
   );
 }

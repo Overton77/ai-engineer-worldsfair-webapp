@@ -17,7 +17,11 @@ import {
   listCourseModulePrerequisites,
 } from "@/lib/db/learn";
 
-import { startCourseFromModuleAction } from "./actions";
+import {
+  markCourseModuleCompleteAction,
+  startCourseFromModuleAction,
+  submitCourseModuleQuizAction,
+} from "./actions";
 
 export const metadata = { title: "Course module" };
 
@@ -90,6 +94,9 @@ export default async function CourseModulePage({
           module={syllabusItem.module}
           contextLabel={`${course.title} · Module ${membership.ord + 1} of ${syllabus.length}`}
           completion={completion}
+          actionInput={{ courseSlug: slug, moduleSlug }}
+          quizAction={submitCourseModuleQuizAction}
+          markCompleteAction={markCourseModuleCompleteAction}
         />
       }
       rail={<ModuleReaderRail challenges={challenges} />}

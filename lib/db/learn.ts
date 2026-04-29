@@ -3,6 +3,11 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { assertOwner, requireUser } from "@/lib/auth/require-user";
+import {
+  getPassThreshold,
+  parseMiniQuiz,
+  type StoredQuizResponse,
+} from "@/lib/learn/module-quiz";
 import { createServerSupabase } from "@/lib/supabase/server";
 import type { Database, Json } from "@/types/database.types";
 
@@ -52,6 +57,7 @@ export type CourseProgressCache = {
 };
 
 export type CompleteModulePayload = {
+  completionMethod?: "quiz" | "mark-complete";
   attempts?: number;
   quizResponses?: Json;
   quizScore?: number | null;
@@ -159,6 +165,54 @@ function mergeMetadata(
 
 function progressIsComplete(progress: CourseProgressCache): boolean {
   return progress.total_module_count > 0 && progress.percent === 100;
+}
+
+function validateCompletionPolicy(
+  module: CourseModuleRow,
+  payload: CompleteModulePayload,
+) {
+  const parsedQuiz = parseMiniQuiz(module.mini_quiz);
+  if (parsedQuiz.questions.length === 0) {
+    if (payload.completionMethod === "quiz") {
+      throw new Error("This module does not include a mini-quiz.");
+    }
+    return;
+  }
+
+  if (payload.completionMethod !== "quiz") {
+    throw new Error("Complete this module by passing the mini-quiz.");
+  }
+
+  if (typeof payload.quizScore !== "number" || !Number.isFinite(payload.quizScore)) {
+    throw new Error("Quiz score is required to complete this module.");
+  }
+
+  const threshold = getPassThreshold({
+    miniQuiz: module.mini_quiz,
+    metadata: module.metadata,
+  });
+  if (payload.quizScore < threshold) {
+    throw new Error("Quiz score did not meet the pass threshold.");
+  }
+
+  if (!hasCompleteQuizResponses(payload.quizResponses, parsedQuiz.questions.length)) {
+    throw new Error("Quiz responses are required to complete this module.");
+  }
+}
+
+function hasCompleteQuizResponses(value: Json | undefined, expectedCount: number) {
+  if (!Array.isArray(value) || value.length < expectedCount) return false;
+  return value.every((response): response is StoredQuizResponse => {
+    if (!response || typeof response !== "object" || Array.isArray(response)) {
+      return false;
+    }
+    const item = response as Record<string, Json | undefined>;
+    return (
+      typeof item.q_id === "string" &&
+      Number.isInteger(item.chosen) &&
+      typeof item.correct === "boolean"
+    );
+  });
 }
 
 export function buildCourseProgressCache(input: {
@@ -716,6 +770,7 @@ export async function completeStandaloneModule(
   const user = await requireUser();
   const sb = await getClient(client);
   const courseModule = await getModuleById(moduleId, sb);
+  validateCompletionPolicy(courseModule, payload);
   const existingCompletion = await getStandaloneModuleCompletion(
     user.id,
     moduleId,
@@ -769,6 +824,7 @@ export async function completeCourseModule(
 
   ensureRow("course enrollment", enrollment);
   ensureRow("course module membership", membership);
+  validateCompletionPolicy(courseModule, payload);
 
   const beforeProgress = await deriveCourseProgress(
     sb,

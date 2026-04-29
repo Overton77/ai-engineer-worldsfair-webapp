@@ -14,6 +14,11 @@ import {
 
 import { extractMarkdownHeadings } from "@/components/modules/module-reader-utils";
 
+import {
+  markStandaloneModuleCompleteAction,
+  submitStandaloneModuleQuizAction,
+} from "./actions";
+
 export const metadata = { title: "Module" };
 
 type StandaloneModulePageProps = {
@@ -48,6 +53,9 @@ export default async function StandaloneModulePage({
           module={courseModule}
           contextLabel="Standalone module"
           completion={completion}
+          actionInput={{ moduleSlug }}
+          quizAction={submitStandaloneModuleQuizAction}
+          markCompleteAction={markStandaloneModuleCompleteAction}
         />
       }
       rail={<ModuleReaderRail challenges={challenges} />}

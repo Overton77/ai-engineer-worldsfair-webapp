@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { AssetCard } from "@/components/assets/asset-card";
 import { ChallengePreviewCard } from "@/components/challenges/challenge-preview-card";
@@ -10,6 +10,12 @@ import { ModuleProse } from "@/components/modules/module-prose";
 import type { CourseModuleRow } from "@/lib/db/learn";
 
 import { ProgressCard } from "./progress-card";
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    refresh: vi.fn(),
+  }),
+}));
 
 describe("learner component foundation", () => {
   it("renders shared learner cards from static view models", () => {
@@ -115,7 +121,7 @@ describe("learner component foundation", () => {
     expect(screen.getByText("Why this matters")).toBeInTheDocument();
   });
 
-  it("renders module markdown content with a read-only quiz state", () => {
+  it("renders module markdown content with a quiz island", () => {
     render(
       <ModuleContent
         contextLabel="Standalone module"
@@ -123,8 +129,17 @@ describe("learner component foundation", () => {
           body_md:
             "## Why this matters\n\nReusable skills need [clear boundaries](/courses).",
           learning_objectives: ["Write durable prompts"],
-          mini_quiz: [{ q_id: "q1", prompt: "Question?" }],
+          mini_quiz: [
+            {
+              q: "Question?",
+              options: ["A", "B"],
+              answer: 0,
+            },
+          ],
         })}
+        actionInput={{ moduleSlug: "agent-skills-101" }}
+        quizAction={noopCompletionAction}
+        markCompleteAction={noopCompletionAction}
       />,
     );
 
@@ -139,11 +154,16 @@ describe("learner component foundation", () => {
     );
     expect(screen.getByText("Write durable prompts")).toBeInTheDocument();
     expect(screen.getByText("Mini-quiz")).toBeInTheDocument();
-    expect(
-      screen.getByText(/Submission and completion writes are handled in the next unit/),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Passing score: 70%")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Submit quiz" })).toBeDisabled();
   });
 });
+
+const noopCompletionAction = vi.fn(async () => ({
+  ok: false as const,
+  completed: false as const,
+  error: "Not implemented in test.",
+}));
 
 function moduleRow(overrides: Partial<CourseModuleRow> = {}): CourseModuleRow {
   return {

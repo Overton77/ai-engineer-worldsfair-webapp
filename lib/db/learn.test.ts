@@ -625,6 +625,73 @@ describe("learner data layer", () => {
     expect(awardCourseCompletionXp).not.toHaveBeenCalled();
   });
 
+  it("requires quiz modules to pass before writing standalone completion", async () => {
+    const state = emptyState({
+      course_module: [
+        moduleRow({
+          module_id: "module-quiz",
+          mini_quiz: [
+            {
+              q: "Question?",
+              options: ["A", "B"],
+              answer: 0,
+            },
+          ],
+        }),
+      ],
+    });
+    const { client } = buildClient(state);
+
+    await expect(
+      completeStandaloneModule(
+        "module-quiz",
+        {
+          completionMethod: "quiz",
+          quizScore: 0.5,
+          quizResponses: [{ q_id: "q1", chosen: 1, correct: false }],
+        },
+        client,
+      ),
+    ).rejects.toThrow("pass threshold");
+
+    expect(state.module_completion).toHaveLength(0);
+    expect(awardModuleCompletionXp).not.toHaveBeenCalled();
+  });
+
+  it("stores quiz responses and score when a quiz module passes", async () => {
+    const state = emptyState({
+      course_module: [
+        moduleRow({
+          module_id: "module-quiz",
+          metadata: { pass_threshold: 0.5 },
+          mini_quiz: [
+            {
+              q: "Question?",
+              options: ["A", "B"],
+              answer: 0,
+            },
+          ],
+        }),
+      ],
+    });
+    const { client } = buildClient(state);
+
+    const result = await completeStandaloneModule(
+      "module-quiz",
+      {
+        completionMethod: "quiz",
+        quizScore: 1,
+        quizResponses: [{ q_id: "q1", chosen: 0, correct: true }],
+      },
+      client,
+    );
+
+    expect(result.completion.quiz_score).toBe(1);
+    expect(result.completion.quiz_responses).toEqual([
+      { q_id: "q1", chosen: 0, correct: true },
+    ]);
+  });
+
   it("writes course-context completion, recomputes course progress, and awards course XP only when newly complete", async () => {
     const state = emptyState({
       course: [course({ version: "1.0.0", metadata: { xp: 100 } })],
