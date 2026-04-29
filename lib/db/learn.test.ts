@@ -7,7 +7,10 @@ import {
   completeCourseModule,
   completeStandaloneModule,
   getCourseSyllabus,
+  listLearnerHub,
+  listPublishedCourseCatalog,
   listPublishedCourses,
+  listPublishedModuleCatalog,
   type ChallengeRow,
   type CourseEnrollmentRow,
   type CourseModuleCompletionRow,
@@ -15,6 +18,7 @@ import {
   type CourseModuleRow,
   type CourseRow,
   type ModuleCompletionRow,
+  type ModuleUsesArtifactRow,
 } from "./learn";
 import {
   awardCourseCompletionXp,
@@ -52,6 +56,7 @@ type State = {
   course_enrollment: CourseEnrollmentRow[];
   module_completion: ModuleCompletionRow[];
   course_module_completion: CourseModuleCompletionRow[];
+  module_uses_artifact: ModuleUsesArtifactRow[];
   challenge: ChallengeRow[];
 };
 
@@ -161,6 +166,21 @@ function courseCompletion(
   };
 }
 
+function moduleUse(
+  overrides: Partial<ModuleUsesArtifactRow> = {},
+): ModuleUsesArtifactRow {
+  return {
+    artifact_id: "asset-1",
+    artifact_kind: "learning_asset",
+    chunk_id: null,
+    created_at: "2026-04-27T00:00:00.000Z",
+    module_id: "module-1",
+    ord: 0,
+    role: "source",
+    ...overrides,
+  };
+}
+
 function emptyState(overrides: Partial<State> = {}): State {
   return {
     course: [],
@@ -169,6 +189,7 @@ function emptyState(overrides: Partial<State> = {}): State {
     course_enrollment: [],
     module_completion: [],
     course_module_completion: [],
+    module_uses_artifact: [],
     challenge: [],
     ...overrides,
   };
@@ -335,6 +356,66 @@ describe("learner data layer", () => {
     expect(rows.map((row) => row.title)).toEqual(["Alpha", "Beta"]);
   });
 
+  it("builds course catalog summaries from published course modules", async () => {
+    const state = emptyState({
+      course: [course({ course_id: "course-1", title: "Agent Course" })],
+      course_module_in_course: [
+        membership({ course_id: "course-1", module_id: "module-1" }),
+        membership({ course_id: "course-1", module_id: "module-2", ord: 1 }),
+      ],
+      course_module: [
+        moduleRow({ module_id: "module-1", duration_min: 15 }),
+        moduleRow({ module_id: "module-2", duration_min: 25 }),
+      ],
+    });
+    const { client } = buildClient(state);
+
+    const rows = await listPublishedCourseCatalog({ client });
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      course: { title: "Agent Course" },
+      moduleCount: 2,
+      durationMinutes: 40,
+    });
+  });
+
+  it("builds module catalog summaries with source counts and standalone completion", async () => {
+    const state = emptyState({
+      course_module: [
+        moduleRow({ module_id: "module-1", title: "First" }),
+        moduleRow({ module_id: "module-2", title: "Second" }),
+      ],
+      module_uses_artifact: [
+        moduleUse({ module_id: "module-1", artifact_id: "asset-1" }),
+        moduleUse({ module_id: "module-1", artifact_id: "asset-2" }),
+        moduleUse({ module_id: "module-2", artifact_id: "asset-3" }),
+      ],
+      module_completion: [
+        {
+          attempts: 1,
+          completed_at: "2026-04-27T00:00:00.000Z",
+          module_id: "module-1",
+          module_version: "1.0.0",
+          quiz_responses: [],
+          quiz_score: null,
+          time_spent_seconds: null,
+          user_id: "user-1",
+        },
+      ],
+    });
+    const { client } = buildClient(state);
+
+    const rows = await listPublishedModuleCatalog({ userId: "user-1", client });
+
+    expect(rows.map((row) => [row.module.title, row.sourceCount])).toEqual([
+      ["First", 2],
+      ["Second", 1],
+    ]);
+    expect(rows[0].completion?.module_id).toBe("module-1");
+    expect(rows[1].completion).toBeNull();
+  });
+
   it("shapes course syllabus in course order", async () => {
     const state = emptyState({
       course_module_in_course: [
@@ -351,6 +432,51 @@ describe("learner data layer", () => {
     const rows = await getCourseSyllabus("course-1", client);
 
     expect(rows.map((row) => row.module.title)).toEqual(["First", "Second"]);
+  });
+
+  it("builds the learner hub from course-context progress and standalone history", async () => {
+    const state = emptyState({
+      course: [course({ title: "Agent Course" })],
+      course_enrollment: [enrollment()],
+      course_module_in_course: [
+        membership({ module_id: "module-1", ord: 0 }),
+        membership({ module_id: "module-2", ord: 1 }),
+      ],
+      course_module: [
+        moduleRow({ module_id: "module-1", title: "Intro" }),
+        moduleRow({ module_id: "module-2", title: "Next" }),
+        moduleRow({
+          module_id: "standalone-1",
+          slug: "standalone",
+          title: "Standalone",
+        }),
+      ],
+      course_module_completion: [courseCompletion({ module_id: "module-1" })],
+      module_completion: [
+        {
+          attempts: 1,
+          completed_at: "2026-04-28T00:00:00.000Z",
+          module_id: "standalone-1",
+          module_version: "1.0.0",
+          quiz_responses: [],
+          quiz_score: null,
+          time_spent_seconds: null,
+          user_id: "user-1",
+        },
+      ],
+    });
+    const { client } = buildClient(state);
+
+    const hub = await listLearnerHub("user-1", { client });
+
+    expect(hub.activeCourses).toHaveLength(1);
+    expect(hub.activeCourses[0].progress).toMatchObject({
+      completed_module_count: 1,
+      total_module_count: 2,
+      percent: 50,
+    });
+    expect(hub.activeCourses[0].nextModule?.title).toBe("Next");
+    expect(hub.recentStandaloneModules[0].module.title).toBe("Standalone");
   });
 
   it("writes standalone completion only to module_completion and awards module XP", async () => {

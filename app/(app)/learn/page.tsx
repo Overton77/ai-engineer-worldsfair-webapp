@@ -1,18 +1,19 @@
-import { BookOpen } from "lucide-react";
-
-import { EmptyState } from "@/components/shell/empty-state";
+import { LearnDashboard } from "@/components/learn/learn-dashboard";
+import { requireUser } from "@/lib/auth/require-user";
+import { listLearnerHub } from "@/lib/db/learn";
+import { getShellProfile } from "@/lib/db/profile";
+import { getCurrentUserStats } from "@/lib/db/stats";
 
 export const metadata = { title: "Learn" };
 
-export default function LearnPage() {
-  return (
-    <div className="mx-auto max-w-5xl space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Learn</h1>
-      <EmptyState
-        icon={BookOpen}
-        title="Learn hub ships in M5"
-        description="Browse courses by layer, bucket, and difficulty. Resume the modules you started."
-      />
-    </div>
-  );
+export default async function LearnPage() {
+  const user = await requireUser();
+  const [shell, stats, hub] = await Promise.all([
+    getShellProfile(user.id),
+    getCurrentUserStats(user.id),
+    listLearnerHub(user.id),
+  ]);
+  const greeting = shell.displayName ?? shell.email.split("@")[0] ?? "there";
+
+  return <LearnDashboard greeting={greeting} stats={stats} hub={hub} />;
 }

@@ -43,3 +43,5 @@ yarn-error.log*
 **/personal_archives/** 
 .vercel
 .env*.local
+# next-agents-md
+.next-docs/

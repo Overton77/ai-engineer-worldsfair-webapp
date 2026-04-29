@@ -1,18 +1,38 @@
-import { GraduationCap } from "lucide-react";
-
-import { EmptyState } from "@/components/shell/empty-state";
+import { CourseCatalog } from "@/components/courses/course-catalog";
+import { listPublishedCourseCatalog } from "@/lib/db/learn";
 
 export const metadata = { title: "Courses" };
 
-export default function CoursesPage() {
+type CoursesPageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export default async function CoursesPage({ searchParams }: CoursesPageProps) {
+  const sp = await searchParams;
+  const query = typeof sp.q === "string" ? sp.q.trim() : "";
+  const courses = await listPublishedCourseCatalog();
+  const filteredCourses = query ? courses.filter((item) => matchesCourse(item, query)) : courses;
+
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Courses</h1>
-      <EmptyState
-        icon={GraduationCap}
-        title="Course catalog ships in M5"
-        description="Multi-module courses with mini-quizzes, prereq DAGs, and a hands-on capstone challenge per course."
-      />
-    </div>
+    <CourseCatalog
+      courses={filteredCourses}
+      totalCount={courses.length}
+      query={query}
+    />
   );
+}
+
+type CourseCatalogItem = Awaited<ReturnType<typeof listPublishedCourseCatalog>>[number];
+
+function matchesCourse(item: CourseCatalogItem, query: string): boolean {
+  const needle = query.toLowerCase();
+  return [
+    item.course.title,
+    item.course.summary,
+    item.course.domain_bucket,
+    item.course.domain_layer,
+    item.course.version,
+  ]
+    .filter((value): value is string => typeof value === "string")
+    .some((value) => value.toLowerCase().includes(needle));
 }

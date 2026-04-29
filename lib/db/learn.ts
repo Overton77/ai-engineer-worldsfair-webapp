@@ -26,6 +26,8 @@ export type CourseModuleCompletionRow =
   Database["public"]["Tables"]["course_module_completion"]["Row"];
 export type ModuleCompletionRow =
   Database["public"]["Tables"]["module_completion"]["Row"];
+export type ModuleUsesArtifactRow =
+  Database["public"]["Tables"]["module_uses_artifact"]["Row"];
 export type ChallengeRow = Database["public"]["Tables"]["challenge"]["Row"];
 
 export type CourseSyllabusItem = CourseModuleInCourseRow & {
@@ -59,6 +61,37 @@ export type CompleteCourseModuleResult = {
   progress: CourseProgressCache;
   moduleXp: XpAwardResult;
   courseXp: XpAwardResult | null;
+};
+
+export type CourseCatalogItem = {
+  course: CourseRow;
+  moduleCount: number;
+  durationMinutes: number | null;
+};
+
+export type ModuleCatalogItem = {
+  module: CourseModuleRow;
+  sourceCount: number;
+  completion: ModuleCompletionRow | null;
+};
+
+export type LearnerHubCourse = {
+  enrollment: CourseEnrollmentRow;
+  course: CourseRow;
+  progress: CourseProgressCache;
+  nextModule: CourseModuleRow | null;
+};
+
+export type LearnerHubRecentModule = {
+  completion: ModuleCompletionRow;
+  module: CourseModuleRow;
+};
+
+export type LearnerHubData = {
+  activeCourses: LearnerHubCourse[];
+  recentStandaloneModules: LearnerHubRecentModule[];
+  recommendedCourses: CourseCatalogItem[];
+  recommendedModules: ModuleCatalogItem[];
 };
 
 async function getClient(client?: Client): Promise<Client> {
@@ -163,6 +196,55 @@ export async function listPublishedCourses(
   return data ?? [];
 }
 
+export async function listPublishedCourseCatalog(
+  opts: { limit?: number; client?: Client } = {},
+): Promise<CourseCatalogItem[]> {
+  const sb = await getClient(opts.client);
+  const courses = await listPublishedCourses({ limit: opts.limit, client: sb });
+  if (courses.length === 0) return [];
+
+  const courseIds = courses.map((row) => row.course_id);
+  const { data: memberships, error: membershipError } = await sb
+    .from("course_module_in_course")
+    .select("*")
+    .in("course_id", courseIds);
+  if (membershipError) {
+    throw dbError("listPublishedCourseCatalog.memberships", membershipError);
+  }
+
+  const moduleIds = Array.from(
+    new Set((memberships ?? []).map((row) => row.module_id)),
+  );
+  const modules =
+    moduleIds.length === 0
+      ? []
+      : await listModulesByIds(moduleIds, sb, "listPublishedCourseCatalog.modules");
+  const moduleById = new Map(modules.map((row) => [row.module_id, row]));
+
+  const summaryByCourse = new Map<
+    string,
+    { moduleCount: number; durationMinutes: number }
+  >();
+  for (const membership of memberships ?? []) {
+    const summary =
+      summaryByCourse.get(membership.course_id) ??
+      { moduleCount: 0, durationMinutes: 0 };
+    summary.moduleCount += 1;
+    summary.durationMinutes += moduleById.get(membership.module_id)?.duration_min ?? 0;
+    summaryByCourse.set(membership.course_id, summary);
+  }
+
+  return courses.map((course) => {
+    const summary = summaryByCourse.get(course.course_id);
+    return {
+      course,
+      moduleCount: summary?.moduleCount ?? 0,
+      durationMinutes:
+        summary && summary.durationMinutes > 0 ? summary.durationMinutes : null,
+    };
+  });
+}
+
 export async function getCourseBySlug(
   slug: string,
   opts: { version?: string; client?: Client } = {},
@@ -250,6 +332,41 @@ export async function listPublishedModules(
   return data ?? [];
 }
 
+export async function listPublishedModuleCatalog(
+  opts: { limit?: number; userId?: string; client?: Client } = {},
+): Promise<ModuleCatalogItem[]> {
+  const sb = await getClient(opts.client);
+  const modules = await listPublishedModules({ limit: opts.limit, client: sb });
+  if (modules.length === 0) return [];
+
+  const moduleIds = modules.map((row) => row.module_id);
+  const { data: uses, error: usesError } = await sb
+    .from("module_uses_artifact")
+    .select("*")
+    .in("module_id", moduleIds);
+  if (usesError) throw dbError("listPublishedModuleCatalog.uses", usesError);
+
+  const completions = opts.userId
+    ? await listStandaloneCompletionsForModules(opts.userId, moduleIds, sb)
+    : [];
+  const completionByModuleId = new Map(
+    completions.map((row) => [row.module_id, row]),
+  );
+  const sourceCountByModuleId = new Map<string, number>();
+  for (const use of uses ?? []) {
+    sourceCountByModuleId.set(
+      use.module_id,
+      (sourceCountByModuleId.get(use.module_id) ?? 0) + 1,
+    );
+  }
+
+  return modules.map((module) => ({
+    module,
+    sourceCount: sourceCountByModuleId.get(module.module_id) ?? 0,
+    completion: completionByModuleId.get(module.module_id) ?? null,
+  }));
+}
+
 export async function getModuleBySlug(
   slug: string,
   opts: { version?: string; client?: Client } = {},
@@ -284,6 +401,102 @@ export async function getStandaloneModuleCompletion(
     .maybeSingle();
   if (error) throw dbError("getStandaloneModuleCompletion", error);
   return data ?? null;
+}
+
+export async function listLearnerHub(
+  userId: string,
+  opts: {
+    courseLimit?: number;
+    moduleLimit?: number;
+    recommendationLimit?: number;
+    client?: Client;
+  } = {},
+): Promise<LearnerHubData> {
+  const sb = await getClient(opts.client);
+  const courseLimit = opts.courseLimit ?? 3;
+  const moduleLimit = opts.moduleLimit ?? 3;
+  const recommendationLimit = opts.recommendationLimit ?? 4;
+
+  const { data: enrollments, error: enrollmentError } = await sb
+    .from("course_enrollment")
+    .select("*")
+    .eq("user_id", userId)
+    .order("started_at", { ascending: false })
+    .limit(courseLimit);
+  if (enrollmentError) throw dbError("listLearnerHub.enrollments", enrollmentError);
+
+  const courses = (enrollments ?? []).length
+    ? await listCoursesByIds(
+        (enrollments ?? []).map((row) => row.course_id),
+        sb,
+        "listLearnerHub.courses",
+      )
+    : [];
+  const courseById = new Map(courses.map((row) => [row.course_id, row]));
+  const activeCourses = (
+    await Promise.all(
+      (enrollments ?? []).map(async (enrollment) => {
+        const course = courseById.get(enrollment.course_id);
+        if (!course) return null;
+        const syllabus = await getCourseSyllabus(enrollment.course_id, sb);
+        const progress = await deriveCourseProgress(
+          sb,
+          userId,
+          enrollment.course_id,
+          course.version,
+        );
+        if (progressIsComplete(progress)) return null;
+
+        return {
+          enrollment,
+          course,
+          progress,
+          nextModule: getNextModuleFromSyllabus(syllabus, progress),
+        };
+      }),
+    )
+  ).filter((row): row is LearnerHubCourse => row !== null);
+
+  const { data: recentCompletions, error: recentError } = await sb
+    .from("module_completion")
+    .select("*")
+    .eq("user_id", userId)
+    .order("completed_at", { ascending: false })
+    .limit(moduleLimit);
+  if (recentError) throw dbError("listLearnerHub.recentCompletions", recentError);
+
+  const recentModules = (recentCompletions ?? []).length
+    ? await listModulesByIds(
+        (recentCompletions ?? []).map((row) => row.module_id),
+        sb,
+        "listLearnerHub.recentModules",
+      )
+    : [];
+  const recentModuleById = new Map(
+    recentModules.map((row) => [row.module_id, row]),
+  );
+  const recentStandaloneModules = (recentCompletions ?? [])
+    .map((completion) => {
+      const courseModule = recentModuleById.get(completion.module_id);
+      return courseModule ? { completion, module: courseModule } : null;
+    })
+    .filter((row): row is LearnerHubRecentModule => row !== null);
+
+  const [recommendedCourses, recommendedModules] = await Promise.all([
+    listPublishedCourseCatalog({ limit: recommendationLimit, client: sb }),
+    listPublishedModuleCatalog({
+      limit: recommendationLimit,
+      userId,
+      client: sb,
+    }),
+  ]);
+
+  return {
+    activeCourses,
+    recentStandaloneModules,
+    recommendedCourses,
+    recommendedModules,
+  };
 }
 
 export async function getCourseModuleCompletion(
@@ -565,6 +778,65 @@ async function getModuleById(
     .maybeSingle();
   if (error) throw dbError("getModuleById", error);
   return ensureRow(`module ${moduleId}`, data);
+}
+
+async function listCoursesByIds(
+  courseIds: string[],
+  client: Client,
+  label: string,
+): Promise<CourseRow[]> {
+  if (courseIds.length === 0) return [];
+  const { data, error } = await client
+    .from("course")
+    .select("*")
+    .in("course_id", Array.from(new Set(courseIds)));
+  if (error) throw dbError(label, error);
+  return data ?? [];
+}
+
+async function listModulesByIds(
+  moduleIds: string[],
+  client: Client,
+  label: string,
+): Promise<CourseModuleRow[]> {
+  if (moduleIds.length === 0) return [];
+  const { data, error } = await client
+    .from("course_module")
+    .select("*")
+    .in("module_id", Array.from(new Set(moduleIds)));
+  if (error) throw dbError(label, error);
+  return data ?? [];
+}
+
+async function listStandaloneCompletionsForModules(
+  userId: string,
+  moduleIds: string[],
+  client: Client,
+): Promise<ModuleCompletionRow[]> {
+  if (moduleIds.length === 0) return [];
+  const { data, error } = await client
+    .from("module_completion")
+    .select("*")
+    .eq("user_id", userId)
+    .in("module_id", moduleIds);
+  if (error) {
+    throw dbError("listStandaloneCompletionsForModules", error);
+  }
+  return data ?? [];
+}
+
+function getNextModuleFromSyllabus(
+  syllabus: CourseSyllabusItem[],
+  progress: CourseProgressCache,
+): CourseModuleRow | null {
+  if (syllabus.length === 0) return null;
+  if (!progress.last_module_id) return syllabus[0]?.module ?? null;
+
+  const lastIndex = syllabus.findIndex(
+    (item) => item.module_id === progress.last_module_id,
+  );
+  if (lastIndex < 0) return syllabus[0]?.module ?? null;
+  return syllabus[lastIndex + 1]?.module ?? null;
 }
 
 async function getCourseModuleMembership(
