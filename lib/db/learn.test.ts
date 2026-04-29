@@ -6,10 +6,12 @@ import type { Database } from "@/types/database.types";
 import {
   completeCourseModule,
   completeStandaloneModule,
+  getCourseModuleMembership,
   getCourseSyllabus,
   listLearnerHub,
   listCourseModuleCompletions,
   listCourseModulePrerequisites,
+  listModuleAssetUses,
   listPublishedCourseCatalog,
   listPublishedCourses,
   listPublishedModuleCatalog,
@@ -20,6 +22,7 @@ import {
   type CourseModulePrerequisiteRow,
   type CourseModuleRow,
   type CourseRow,
+  type LearningAssetRow,
   type ModuleCompletionRow,
   type ModuleUsesArtifactRow,
 } from "./learn";
@@ -61,6 +64,7 @@ type State = {
   module_completion: ModuleCompletionRow[];
   course_module_completion: CourseModuleCompletionRow[];
   module_uses_artifact: ModuleUsesArtifactRow[];
+  learning_asset: LearningAssetRow[];
   challenge: ChallengeRow[];
 };
 
@@ -185,6 +189,33 @@ function moduleUse(
   };
 }
 
+function learningAsset(overrides: Partial<LearningAssetRow> = {}): LearningAssetRow {
+  return {
+    asset_id: "asset-1",
+    asset_kind: "pdf",
+    bucket: null,
+    checksum_sha256: null,
+    created_at: "2026-04-27T00:00:00.000Z",
+    description: "A source asset.",
+    external_url: null,
+    extracted_text: null,
+    extraction_error: null,
+    extraction_status: "succeeded",
+    file_size_bytes: 1024,
+    metadata: {},
+    mime_type: "application/pdf",
+    preview_url: null,
+    provider: "external-url",
+    slug: "skill-review-checklist",
+    source_path: null,
+    storage_path: null,
+    text_extracted_at: null,
+    title: "Skill Review Checklist",
+    updated_at: "2026-04-27T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
 function emptyState(overrides: Partial<State> = {}): State {
   return {
     course: [],
@@ -195,6 +226,7 @@ function emptyState(overrides: Partial<State> = {}): State {
     module_completion: [],
     course_module_completion: [],
     module_uses_artifact: [],
+    learning_asset: [],
     challenge: [],
     ...overrides,
   };
@@ -474,6 +506,50 @@ describe("learner data layer", () => {
 
     expect(rows).toHaveLength(1);
     expect(rows[0].prereqModule.title).toBe("Agent Skills 101");
+  });
+
+  it("resolves module asset uses in module order", async () => {
+    const state = emptyState({
+      module_uses_artifact: [
+        moduleUse({ artifact_id: "asset-2", ord: 1 }),
+        moduleUse({ artifact_id: "asset-1", ord: 0 }),
+        moduleUse({
+          artifact_id: "paper-1",
+          artifact_kind: "paper",
+          ord: 2,
+        }),
+      ],
+      learning_asset: [
+        learningAsset({ asset_id: "asset-1", title: "First Source" }),
+        learningAsset({ asset_id: "asset-2", title: "Second Source" }),
+      ],
+    });
+    const { client } = buildClient(state);
+
+    const rows = await listModuleAssetUses("module-1", client);
+
+    expect(rows.map((row) => row.artifact_id)).toEqual([
+      "asset-1",
+      "asset-2",
+      "paper-1",
+    ]);
+    expect(rows[0].asset?.title).toBe("First Source");
+    expect(rows[1].asset?.title).toBe("Second Source");
+    expect(rows[2].asset).toBeNull();
+  });
+
+  it("returns course module membership only for modules in the course", async () => {
+    const state = emptyState({
+      course_module_in_course: [membership({ module_id: "module-1" })],
+    });
+    const { client } = buildClient(state);
+
+    await expect(
+      getCourseModuleMembership("course-1", "module-1", client),
+    ).resolves.toMatchObject({ course_id: "course-1", module_id: "module-1" });
+    await expect(
+      getCourseModuleMembership("course-1", "module-2", client),
+    ).resolves.toBeNull();
   });
 
   it("builds the learner hub from course-context progress and standalone history", async () => {

@@ -5,7 +5,9 @@ import { AssetCard } from "@/components/assets/asset-card";
 import { ChallengePreviewCard } from "@/components/challenges/challenge-preview-card";
 import { CourseCard } from "@/components/courses/course-card";
 import { ModuleCard } from "@/components/modules/module-card";
+import { ModuleContent } from "@/components/modules/module-content";
 import { ModuleProse } from "@/components/modules/module-prose";
+import type { CourseModuleRow } from "@/lib/db/learn";
 
 import { ProgressCard } from "./progress-card";
 
@@ -112,4 +114,61 @@ describe("learner component foundation", () => {
     expect(screen.getByTestId("module-prose")).toHaveClass("max-w-3xl");
     expect(screen.getByText("Why this matters")).toBeInTheDocument();
   });
+
+  it("renders module markdown content with a read-only quiz state", () => {
+    render(
+      <ModuleContent
+        contextLabel="Standalone module"
+        module={moduleRow({
+          body_md:
+            "## Why this matters\n\nReusable skills need [clear boundaries](/courses).",
+          learning_objectives: ["Write durable prompts"],
+          mini_quiz: [{ q_id: "q1", prompt: "Question?" }],
+        })}
+      />,
+    );
+
+    expect(
+      screen
+        .getAllByRole("heading", { name: "Why this matters" })
+        .find((heading) => heading.id === "why-this-matters"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "clear boundaries" })).toHaveAttribute(
+      "href",
+      "/courses",
+    );
+    expect(screen.getByText("Write durable prompts")).toBeInTheDocument();
+    expect(screen.getByText("Mini-quiz")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Submission and completion writes are handled in the next unit/),
+    ).toBeInTheDocument();
+  });
 });
+
+function moduleRow(overrides: Partial<CourseModuleRow> = {}): CourseModuleRow {
+  return {
+    authors: [],
+    body_kind: "concept",
+    body_md: "Body",
+    content_hash: null,
+    created_at: "2026-04-27T00:00:00.000Z",
+    difficulty: "beginner",
+    domain_buckets: ["agent_orchestration"],
+    duration_min: 15,
+    embedding: null,
+    fts: null,
+    is_latest_published: true,
+    learning_objectives: [],
+    metadata: {},
+    mini_quiz: [],
+    module_id: "module-1",
+    search_text: null,
+    slug: "module-1",
+    source_path: null,
+    status: "published",
+    title: "Agent Skills 101",
+    updated_at: "2026-04-27T00:00:00.000Z",
+    version: "1.0.0",
+    ...overrides,
+  };
+}

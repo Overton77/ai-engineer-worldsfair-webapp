@@ -30,6 +30,8 @@ export type ModuleCompletionRow =
   Database["public"]["Tables"]["module_completion"]["Row"];
 export type ModuleUsesArtifactRow =
   Database["public"]["Tables"]["module_uses_artifact"]["Row"];
+export type LearningAssetRow =
+  Database["public"]["Tables"]["learning_asset"]["Row"];
 export type ChallengeRow = Database["public"]["Tables"]["challenge"]["Row"];
 
 export type CourseSyllabusItem = CourseModuleInCourseRow & {
@@ -79,6 +81,10 @@ export type ModuleCatalogItem = {
   module: CourseModuleRow;
   sourceCount: number;
   completion: ModuleCompletionRow | null;
+};
+
+export type ModuleAssetUse = ModuleUsesArtifactRow & {
+  asset: LearningAssetRow | null;
 };
 
 export type LearnerHubCourse = {
@@ -407,6 +413,45 @@ export async function getStandaloneModuleCompletion(
     .maybeSingle();
   if (error) throw dbError("getStandaloneModuleCompletion", error);
   return data ?? null;
+}
+
+export async function listModuleAssetUses(
+  moduleId: string,
+  client?: Client,
+): Promise<ModuleAssetUse[]> {
+  const sb = await getClient(client);
+  const { data: uses, error: usesError } = await sb
+    .from("module_uses_artifact")
+    .select("*")
+    .eq("module_id", moduleId)
+    .order("ord", { ascending: true });
+  if (usesError) throw dbError("listModuleAssetUses.uses", usesError);
+  if (!uses || uses.length === 0) return [];
+
+  const assetIds = Array.from(
+    new Set(
+      uses
+        .filter((use) => use.artifact_kind === "learning_asset")
+        .map((use) => use.artifact_id),
+    ),
+  );
+  const { data: assets, error: assetsError } =
+    assetIds.length === 0
+      ? { data: [], error: null }
+      : await sb.from("learning_asset").select("*").in("asset_id", assetIds);
+  if (assetsError) throw dbError("listModuleAssetUses.assets", assetsError);
+
+  const assetById = new Map(
+    (assets ?? []).map((asset) => [asset.asset_id, asset]),
+  );
+
+  return uses.map((use) => ({
+    ...use,
+    asset:
+      use.artifact_kind === "learning_asset"
+        ? (assetById.get(use.artifact_id) ?? null)
+        : null,
+  }));
 }
 
 export async function listLearnerHub(
@@ -890,12 +935,13 @@ function getNextModuleFromSyllabus(
   return syllabus[lastIndex + 1]?.module ?? null;
 }
 
-async function getCourseModuleMembership(
+export async function getCourseModuleMembership(
   courseId: string,
   moduleId: string,
-  client: Client,
+  client?: Client,
 ): Promise<CourseModuleInCourseRow | null> {
-  const { data, error } = await client
+  const sb = await getClient(client);
+  const { data, error } = await sb
     .from("course_module_in_course")
     .select("*")
     .eq("course_id", courseId)
