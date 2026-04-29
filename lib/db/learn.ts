@@ -24,6 +24,8 @@ export type CourseModuleInCourseRow =
   Database["public"]["Tables"]["course_module_in_course"]["Row"];
 export type CourseModuleCompletionRow =
   Database["public"]["Tables"]["course_module_completion"]["Row"];
+export type CourseModulePrerequisiteRow =
+  Database["public"]["Tables"]["course_module_requires"]["Row"];
 export type ModuleCompletionRow =
   Database["public"]["Tables"]["module_completion"]["Row"];
 export type ModuleUsesArtifactRow =
@@ -32,6 +34,10 @@ export type ChallengeRow = Database["public"]["Tables"]["challenge"]["Row"];
 
 export type CourseSyllabusItem = CourseModuleInCourseRow & {
   module: CourseModuleRow;
+};
+
+export type CourseModulePrerequisite = CourseModulePrerequisiteRow & {
+  prereqModule: CourseModuleRow;
 };
 
 export type CourseProgressCache = {
@@ -515,6 +521,51 @@ export async function getCourseModuleCompletion(
     .maybeSingle();
   if (error) throw dbError("getCourseModuleCompletion", error);
   return data ?? null;
+}
+
+export async function listCourseModuleCompletions(
+  userId: string,
+  courseId: string,
+  client?: Client,
+): Promise<CourseModuleCompletionRow[]> {
+  const sb = await getClient(client);
+  const { data, error } = await sb
+    .from("course_module_completion")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("course_id", courseId);
+  if (error) throw dbError("listCourseModuleCompletions", error);
+  return data ?? [];
+}
+
+export async function listCourseModulePrerequisites(
+  moduleIds: string[],
+  client?: Client,
+): Promise<CourseModulePrerequisite[]> {
+  if (moduleIds.length === 0) return [];
+  const sb = await getClient(client);
+  const { data: prerequisites, error } = await sb
+    .from("course_module_requires")
+    .select("*")
+    .in("module_id", Array.from(new Set(moduleIds)));
+  if (error) throw dbError("listCourseModulePrerequisites", error);
+  if (!prerequisites || prerequisites.length === 0) return [];
+
+  const prereqModuleIds = prerequisites.map((row) => row.prereq_module_id);
+  const prereqModules = await listModulesByIds(
+    prereqModuleIds,
+    sb,
+    "listCourseModulePrerequisites.modules",
+  );
+  const moduleById = new Map(prereqModules.map((row) => [row.module_id, row]));
+
+  return prerequisites.map((row) => ({
+    ...row,
+    prereqModule: ensureRow(
+      `prerequisite module ${row.prereq_module_id}`,
+      moduleById.get(row.prereq_module_id),
+    ),
+  }));
 }
 
 export async function getChallengeBySlug(

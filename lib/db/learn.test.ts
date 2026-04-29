@@ -8,6 +8,8 @@ import {
   completeStandaloneModule,
   getCourseSyllabus,
   listLearnerHub,
+  listCourseModuleCompletions,
+  listCourseModulePrerequisites,
   listPublishedCourseCatalog,
   listPublishedCourses,
   listPublishedModuleCatalog,
@@ -15,6 +17,7 @@ import {
   type CourseEnrollmentRow,
   type CourseModuleCompletionRow,
   type CourseModuleInCourseRow,
+  type CourseModulePrerequisiteRow,
   type CourseModuleRow,
   type CourseRow,
   type ModuleCompletionRow,
@@ -53,6 +56,7 @@ type State = {
   course: CourseRow[];
   course_module: CourseModuleRow[];
   course_module_in_course: CourseModuleInCourseRow[];
+  course_module_requires: CourseModulePrerequisiteRow[];
   course_enrollment: CourseEnrollmentRow[];
   module_completion: ModuleCompletionRow[];
   course_module_completion: CourseModuleCompletionRow[];
@@ -186,6 +190,7 @@ function emptyState(overrides: Partial<State> = {}): State {
     course: [],
     course_module: [],
     course_module_in_course: [],
+    course_module_requires: [],
     course_enrollment: [],
     module_completion: [],
     course_module_completion: [],
@@ -432,6 +437,43 @@ describe("learner data layer", () => {
     const rows = await getCourseSyllabus("course-1", client);
 
     expect(rows.map((row) => row.module.title)).toEqual(["First", "Second"]);
+  });
+
+  it("lists course module completions for one learner course", async () => {
+    const state = emptyState({
+      course_module_completion: [
+        courseCompletion({ module_id: "module-1" }),
+        courseCompletion({ course_id: "course-2", module_id: "module-2" }),
+        courseCompletion({ user_id: "user-2", module_id: "module-3" }),
+      ],
+    });
+    const { client } = buildClient(state);
+
+    const rows = await listCourseModuleCompletions("user-1", "course-1", client);
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].module_id).toBe("module-1");
+  });
+
+  it("lists soft prerequisite module labels", async () => {
+    const state = emptyState({
+      course_module_requires: [
+        {
+          created_at: "2026-04-27T00:00:00.000Z",
+          module_id: "module-2",
+          prereq_module_id: "module-1",
+        },
+      ],
+      course_module: [
+        moduleRow({ module_id: "module-1", title: "Agent Skills 101" }),
+      ],
+    });
+    const { client } = buildClient(state);
+
+    const rows = await listCourseModulePrerequisites(["module-2"], client);
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].prereqModule.title).toBe("Agent Skills 101");
   });
 
   it("builds the learner hub from course-context progress and standalone history", async () => {
