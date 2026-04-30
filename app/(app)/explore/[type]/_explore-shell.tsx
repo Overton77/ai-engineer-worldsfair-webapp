@@ -58,6 +58,7 @@ type ExploreShellProps = {
   initialQuery: string;
   initialFilter: ExploreFilterValue;
   initialSort: ExploreSort;
+  initialOffset?: number;
   /** SSR-resolved save/follow state for the FIRST page of rows only. */
   initialSavedKeys?: string[];
   initialFollowingKeys?: string[];
@@ -72,6 +73,7 @@ export function ExploreShell({
   initialQuery,
   initialFilter,
   initialSort,
+  initialOffset,
   initialSavedKeys,
   initialFollowingKeys,
   initialPeopleFacets,
@@ -92,6 +94,7 @@ export function ExploreShell({
     initialFilter,
     initialRows,
     initialTotal,
+    initialOffset,
   });
 
   // Live facet counts for the People view, scoped by current q+filter.

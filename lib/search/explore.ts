@@ -13,6 +13,8 @@ import { ROLE_BUCKETS } from "./people-roles";
 import {
   EXPLORE_SORTS,
   ExploreRowSchema,
+  KIND_DEFAULT_SORT_NO_Q,
+  KIND_SORT_OPTIONS,
   type ExploreFilters,
   type ExploreKind,
   type ExploreResult,
@@ -97,11 +99,15 @@ function clampOffset(input: number | undefined): number {
 }
 
 function pickSort(
+  kind: ExploreKind,
   q: string,
   sort: ExploreSort | undefined,
 ): ExploreSort {
-  if (sort && SORT_SET.has(sort)) return sort;
-  return q.length > 0 ? "relevance" : "popularity";
+  const allowed = KIND_SORT_OPTIONS[kind];
+  if (sort && SORT_SET.has(sort) && allowed.includes(sort)) return sort;
+  return q.length > 0 && allowed.includes("relevance")
+    ? "relevance"
+    : KIND_DEFAULT_SORT_NO_Q[kind];
 }
 
 /**
@@ -128,7 +134,7 @@ export async function exploreEntities(
     layers: sanitizeStringArray(filters.layers, LAYER_SET),
     categories: sanitizeStringArray(filters.categories, CATEGORY_SET),
     tags: sanitizeFreeStrings(filters.tags),
-    sort: pickSort(trimmedQ, filters.sort),
+    sort: pickSort(kind, trimmedQ, filters.sort),
     limit_count: clampLimit(filters.limit),
     offset_count: clampOffset(filters.offset),
   };

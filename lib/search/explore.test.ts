@@ -49,18 +49,27 @@ describe("exploreEntities", () => {
     });
   });
 
-  it("falls back to 'popularity' sort when q is empty", async () => {
+  it("falls back to hidden relevance sort when q is empty for non-video kinds", async () => {
     const { client, rpc } = mockClient({ data: [], error: null });
     await exploreEntities("library", {}, client);
+    expect(rpc.mock.calls[0][1]).toMatchObject({
+      q: undefined,
+      sort: "relevance",
+    });
+  });
+
+  it("keeps youtube videos on the visible popularity default when q is empty", async () => {
+    const { client, rpc } = mockClient({ data: [], error: null });
+    await exploreEntities("youtube_video", {}, client);
     expect(rpc.mock.calls[0][1]).toMatchObject({
       q: undefined,
       sort: "popularity",
     });
   });
 
-  it("respects an explicit sort override", async () => {
+  it("respects an explicit sort override for video sorts", async () => {
     const { client, rpc } = mockClient({ data: [], error: null });
-    await exploreEntities("library", { q: "x", sort: "alpha" }, client);
+    await exploreEntities("youtube_video", { q: "x", sort: "alpha" }, client);
     expect(rpc.mock.calls[0][1]).toMatchObject({ sort: "alpha" });
   });
 

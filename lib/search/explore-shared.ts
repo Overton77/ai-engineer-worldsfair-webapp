@@ -44,24 +44,24 @@ export type ExploreSort = (typeof EXPLORE_SORTS)[number];
 
 /** Which sort options each kind actually supports / makes sense for. */
 export const KIND_SORT_OPTIONS: Record<ExploreKind, readonly ExploreSort[]> = {
-  // People have no popularity signal yet (column is 0 for everyone) and
-  // no meaningful "recent" — `updated_at` reflects last enrichment, not
-  // anything user-meaningful. So we surface only relevance and alpha.
-  person: ["relevance", "alpha"],
-  organization: ["relevance", "popularity", "recent", "alpha"],
-  library: ["relevance", "popularity", "recent", "alpha"],
-  paper: ["relevance", "popularity", "recent", "alpha"],
-  session: ["relevance", "recent", "alpha"],
+  // Keep non-video sort controls hidden for now. The RPCs expose generic
+  // sort strings, but the database types do not make the meaning clear
+  // enough per entity to present user-facing choices.
+  person: ["relevance"],
+  organization: ["relevance"],
+  library: ["relevance"],
+  paper: ["relevance"],
+  session: ["relevance"],
   youtube_video: ["relevance", "popularity", "recent", "alpha"],
 };
 
 /** Default sort when there is no q. */
 export const KIND_DEFAULT_SORT_NO_Q: Record<ExploreKind, ExploreSort> = {
-  person: "alpha",
-  organization: "popularity",
-  library: "popularity",
-  paper: "popularity",
-  session: "recent",
+  person: "relevance",
+  organization: "relevance",
+  library: "relevance",
+  paper: "relevance",
+  session: "relevance",
   youtube_video: "popularity",
 };
 
@@ -131,12 +131,15 @@ export const KIND_FILTER_DIMENSIONS: Record<
   ExploreKind,
   readonly FilterDimension[]
 > = {
-  person: ["roleBuckets", "orgs", "tags"],
-  organization: ["layers", "categories", "tags"],
-  library: ["layers", "categories", "tags"],
-  paper: ["layers", "categories", "tags"],
-  session: ["layers", "categories", "tags"],
-  youtube_video: ["layers", "categories", "tags"],
+  person: ["roleBuckets", "orgs"],
+  // Organizations, Libraries, Papers, and Talks have fields that could
+  // eventually support filters, but no entity-specific facet data in the
+  // current types. Hiding them avoids empty or misleading controls.
+  organization: [],
+  library: [],
+  paper: [],
+  session: [],
+  youtube_video: ["layers", "categories"],
 };
 
 export function kindHasDimension(

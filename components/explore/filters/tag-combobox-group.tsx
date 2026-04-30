@@ -117,7 +117,7 @@ export function TagComboboxGroup({
                 value={draft}
                 onValueChange={setDraft}
               />
-              <CommandList className="max-h-72">
+              <CommandList className="scrollbar-none max-h-72">
                 <CommandEmpty>
                   {loading
                     ? "Loading tags…"

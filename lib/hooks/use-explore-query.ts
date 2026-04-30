@@ -18,6 +18,8 @@ import {
 } from "@/lib/schema/taxonomy";
 import {
   EXPLORE_SORTS,
+  KIND_FILTER_DIMENSIONS,
+  type FilterDimension,
   type ExploreKind,
   type ExploreRow,
   type ExploreSort,
@@ -44,6 +46,10 @@ export type UseExploreQueryArgs = {
   initialFilter: ExploreFilterValue;
   initialRows: ExploreRow[];
   initialTotal: number;
+  initialOffset?: number;
+  pageSize?: number;
+  lockedSort?: ExploreSort;
+  filterDimensions?: readonly FilterDimension[];
 };
 
 export type UseExploreQuery = {
@@ -59,6 +65,14 @@ export type UseExploreQuery = {
   setFilter: (next: ExploreFilterValue) => void;
   patchFilter: (patch: Partial<ExploreFilterValue>) => void;
   loadMore: () => void;
+  offset: number;
+  pageSize: number;
+  pageStart: number;
+  pageEnd: number;
+  canPrevPage: boolean;
+  canNextPage: boolean;
+  prevPage: () => void;
+  nextPage: () => void;
   resetFilters: () => void;
   /** Total number of active filter values across every dimension. */
   activeFilterCount: number;
@@ -86,7 +100,15 @@ export function useExploreQuery({
   initialFilter,
   initialRows,
   initialTotal,
+  initialOffset = 0,
+  pageSize = PAGE_SIZE,
+  lockedSort,
+  filterDimensions = KIND_FILTER_DIMENSIONS[kind],
 }: UseExploreQueryArgs): UseExploreQuery {
+  const enabledDimensions = React.useMemo(
+    () => new Set<FilterDimension>(filterDimensions),
+    [filterDimensions],
+  );
   const [params, setParams] = useQueryStates({
     q: parseAsString.withDefault(initialQuery),
     sort: parseAsStringLiteral(EXPLORE_SORTS).withDefault(initialSort),
@@ -101,7 +123,7 @@ export function useExploreQuery({
       initialFilter.roleBuckets,
     ),
     orgs: parseAsArrayOf(parseAsString).withDefault(initialFilter.orgIds),
-    cursor: parseAsInteger.withDefault(0),
+    offset: parseAsInteger.withDefault(initialOffset),
   });
 
   const [rows, setRows] = React.useState<ExploreRow[]>(initialRows);
@@ -114,47 +136,61 @@ export function useExploreQuery({
       kind,
       q: initialQuery,
       sort: initialSort,
-      layers: initialFilter.layers,
-      categories: initialFilter.categories,
-      tags: initialFilter.tags,
-      roles: initialFilter.roleBuckets,
-      orgs: initialFilter.orgIds,
-      cursor: 0,
+      layers: enabledDimensions.has("layers") ? initialFilter.layers : [],
+      categories: enabledDimensions.has("categories")
+        ? initialFilter.categories
+        : [],
+      tags: enabledDimensions.has("tags") ? initialFilter.tags : [],
+      roles: enabledDimensions.has("roleBuckets")
+        ? initialFilter.roleBuckets
+        : [],
+      orgs: enabledDimensions.has("orgs") ? initialFilter.orgIds : [],
+      offset: initialOffset,
     }),
   );
   const reqIdRef = React.useRef(0);
 
   const filter: ExploreFilterValue = React.useMemo(
     () => ({
-      layers: params.layers as DomainLayer[],
-      categories: params.categories as CategoryKey[],
-      tags: params.tags,
-      roleBuckets: params.roles as RoleBucket[],
-      orgIds: params.orgs,
+      layers: enabledDimensions.has("layers")
+        ? (params.layers as DomainLayer[])
+        : [],
+      categories: enabledDimensions.has("categories")
+        ? (params.categories as CategoryKey[])
+        : [],
+      tags: enabledDimensions.has("tags") ? params.tags : [],
+      roleBuckets: enabledDimensions.has("roleBuckets")
+        ? (params.roles as RoleBucket[])
+        : [],
+      orgIds: enabledDimensions.has("orgs") ? params.orgs : [],
     }),
-    [params.layers, params.categories, params.tags, params.roles, params.orgs],
+    [
+      enabledDimensions,
+      params.layers,
+      params.categories,
+      params.tags,
+      params.roles,
+      params.orgs,
+    ],
   );
 
   const trimmedQ = params.q.trim();
+  const sort = lockedSort ?? params.sort;
 
   React.useEffect(() => {
     const key = JSON.stringify({
       kind,
       q: trimmedQ,
-      sort: params.sort,
+      sort,
       layers: filter.layers,
       categories: filter.categories,
       tags: filter.tags,
       roles: filter.roleBuckets,
       orgs: filter.orgIds,
-      cursor: 0,
+      offset: params.offset,
     });
     if (key === initialKey.current) return;
     initialKey.current = "";
-    if (params.cursor !== 0) {
-      setParams({ cursor: 0 });
-      return;
-    }
     setLoading(true);
     const id = ++reqIdRef.current;
     exploreAction({
@@ -165,9 +201,9 @@ export function useExploreQuery({
       tags: filter.tags,
       roleBuckets: filter.roleBuckets,
       orgIds: filter.orgIds,
-      sort: params.sort,
-      limit: PAGE_SIZE,
-      offset: 0,
+      sort,
+      limit: pageSize,
+      offset: params.offset,
     })
       .then((result) => {
         if (id !== reqIdRef.current) return;
@@ -185,19 +221,21 @@ export function useExploreQuery({
   }, [
     kind,
     trimmedQ,
-    params.sort,
-    params.cursor,
+    sort,
+    params.offset,
     filter.layers,
     filter.categories,
     filter.tags,
     filter.roleBuckets,
     filter.orgIds,
+    pageSize,
     setParams,
   ]);
 
   const loadMore = React.useCallback(() => {
+    if (loading || loadingMore || rows.length >= total) return;
     setLoadingMore(true);
-    const offset = rows.length;
+    const offset = params.offset + rows.length;
     const id = ++reqIdRef.current;
     exploreAction({
       kind,
@@ -207,8 +245,8 @@ export function useExploreQuery({
       tags: filter.tags,
       roleBuckets: filter.roleBuckets,
       orgIds: filter.orgIds,
-      sort: params.sort,
-      limit: PAGE_SIZE,
+      sort,
+      limit: pageSize,
       offset,
     })
       .then((result) => {
@@ -222,19 +260,31 @@ export function useExploreQuery({
         console.warn("explore loadMore failed:", err);
         setLoadingMore(false);
       });
-  }, [kind, trimmedQ, filter, params.sort, rows.length]);
+  }, [
+    kind,
+    trimmedQ,
+    filter,
+    sort,
+    params.offset,
+    pageSize,
+    rows.length,
+    total,
+    loading,
+    loadingMore,
+  ]);
 
   const setFilter = React.useCallback(
     (next: ExploreFilterValue) => {
       setParams({
-        layers: next.layers,
-        categories: next.categories,
-        tags: next.tags,
-        roles: next.roleBuckets,
-        orgs: next.orgIds,
+        layers: enabledDimensions.has("layers") ? next.layers : [],
+        categories: enabledDimensions.has("categories") ? next.categories : [],
+        tags: enabledDimensions.has("tags") ? next.tags : [],
+        roles: enabledDimensions.has("roleBuckets") ? next.roleBuckets : [],
+        orgs: enabledDimensions.has("orgs") ? next.orgIds : [],
+        offset: 0,
       });
     },
-    [setParams],
+    [enabledDimensions, setParams],
   );
 
   const patchFilter = React.useCallback(
@@ -245,14 +295,25 @@ export function useExploreQuery({
   );
 
   const setQ = React.useCallback(
-    (next: string) => setParams({ q: next }),
+    (next: string) => setParams({ q: next, offset: 0 }),
     [setParams],
   );
 
   const setSort = React.useCallback(
-    (next: ExploreSort) => setParams({ sort: next }),
-    [setParams],
+    (next: ExploreSort) => {
+      if (lockedSort) return;
+      setParams({ sort: next, offset: 0 });
+    },
+    [lockedSort, setParams],
   );
+
+  const prevPage = React.useCallback(() => {
+    setParams({ offset: Math.max(0, params.offset - pageSize) });
+  }, [pageSize, params.offset, setParams]);
+
+  const nextPage = React.useCallback(() => {
+    setParams({ offset: params.offset + pageSize });
+  }, [pageSize, params.offset, setParams]);
 
   const resetFilters = React.useCallback(
     () => setFilter(EMPTY_FILTER),
@@ -266,6 +327,9 @@ export function useExploreQuery({
     filter.roleBuckets.length +
     filter.orgIds.length;
 
+  const pageStart = total === 0 ? 0 : params.offset + 1;
+  const pageEnd = Math.min(params.offset + rows.length, total);
+
   return {
     rows,
     total,
@@ -273,12 +337,20 @@ export function useExploreQuery({
     loadingMore,
     q: params.q,
     setQ,
-    sort: params.sort,
+    sort,
     setSort,
     filter,
     setFilter,
     patchFilter,
     loadMore,
+    offset: params.offset,
+    pageSize,
+    pageStart,
+    pageEnd,
+    canPrevPage: params.offset > 0,
+    canNextPage: params.offset + rows.length < total,
+    prevPage,
+    nextPage,
     resetFilters,
     activeFilterCount,
   };

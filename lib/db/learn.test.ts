@@ -8,6 +8,7 @@ import {
   completeStandaloneModule,
   getCourseModuleMembership,
   getCourseSyllabus,
+  getMostRecentActiveLearnerCourse,
   listLearnerHub,
   listCourseModuleCompletions,
   listCourseModulePrerequisites,
@@ -595,6 +596,54 @@ describe("learner data layer", () => {
     });
     expect(hub.activeCourses[0].nextModule?.title).toBe("Next");
     expect(hub.recentStandaloneModules[0].module.title).toBe("Standalone");
+  });
+
+  it("returns the most recent enrolled course that is still in progress", async () => {
+    const state = emptyState({
+      course: [
+        course({
+          course_id: "completed-course",
+          slug: "completed",
+          title: "Completed Course",
+        }),
+        course({
+          course_id: "active-course",
+          slug: "active",
+          title: "Active Course",
+        }),
+      ],
+      course_enrollment: [
+        enrollment({
+          course_id: "completed-course",
+          completed_at: "2026-04-29T00:00:00.000Z",
+          started_at: "2026-04-29T00:00:00.000Z",
+        }),
+        enrollment({
+          course_id: "active-course",
+          started_at: "2026-04-28T00:00:00.000Z",
+        }),
+      ],
+      course_module_in_course: [
+        membership({ course_id: "active-course", module_id: "module-1", ord: 0 }),
+        membership({ course_id: "active-course", module_id: "module-2", ord: 1 }),
+      ],
+      course_module: [
+        moduleRow({ module_id: "module-1", title: "First Module" }),
+        moduleRow({ module_id: "module-2", title: "Second Module" }),
+      ],
+      course_module_completion: [
+        courseCompletion({ course_id: "active-course", module_id: "module-1" }),
+      ],
+    });
+    const { client } = buildClient(state);
+
+    const activeCourse = await getMostRecentActiveLearnerCourse("user-1", {
+      client,
+    });
+
+    expect(activeCourse?.course.title).toBe("Active Course");
+    expect(activeCourse?.nextModule?.title).toBe("Second Module");
+    expect(activeCourse?.progress.percent).toBe(50);
   });
 
   it("writes standalone completion only to module_completion and awards module XP", async () => {

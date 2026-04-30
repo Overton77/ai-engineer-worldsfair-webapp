@@ -604,6 +604,62 @@ export async function listLearnerHub(
   };
 }
 
+export async function getMostRecentActiveLearnerCourse(
+  userId: string,
+  opts: {
+    enrollmentLimit?: number;
+    client?: Client;
+  } = {},
+): Promise<LearnerHubCourse | null> {
+  const sb = await getClient(opts.client);
+  const enrollmentLimit = opts.enrollmentLimit ?? 10;
+
+  const { data: enrollments, error: enrollmentError } = await sb
+    .from("course_enrollment")
+    .select("*")
+    .eq("user_id", userId)
+    .order("started_at", { ascending: false })
+    .limit(enrollmentLimit);
+  if (enrollmentError) {
+    throw dbError("getMostRecentActiveLearnerCourse.enrollments", enrollmentError);
+  }
+
+  const activeEnrollments = (enrollments ?? []).filter(
+    (enrollment) => !enrollment.completed_at,
+  );
+  const courses = activeEnrollments.length
+    ? await listCoursesByIds(
+        activeEnrollments.map((row) => row.course_id),
+        sb,
+        "getMostRecentActiveLearnerCourse.courses",
+      )
+    : [];
+  const courseById = new Map(courses.map((row) => [row.course_id, row]));
+
+  for (const enrollment of activeEnrollments) {
+    const course = courseById.get(enrollment.course_id);
+    if (!course) continue;
+
+    const syllabus = await getCourseSyllabus(enrollment.course_id, sb);
+    const progress = await deriveCourseProgress(
+      sb,
+      userId,
+      enrollment.course_id,
+      course.version,
+    );
+    if (progressIsComplete(progress)) continue;
+
+    return {
+      enrollment,
+      course,
+      progress,
+      nextModule: getNextModuleFromSyllabus(syllabus, progress),
+    };
+  }
+
+  return null;
+}
+
 export async function getCourseModuleCompletion(
   userId: string,
   courseId: string,

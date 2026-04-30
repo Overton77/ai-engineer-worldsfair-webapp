@@ -148,7 +148,7 @@ export function OrgPickerGroup({
           >
             <Command>
               <CommandInput placeholder="Search companies…" />
-              <CommandList className="max-h-72">
+              <CommandList className="scrollbar-none max-h-72">
                 <CommandEmpty>
                   {loading ? "Loading companies…" : "No companies match."}
                 </CommandEmpty>

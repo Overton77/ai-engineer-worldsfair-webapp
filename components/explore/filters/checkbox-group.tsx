@@ -51,7 +51,7 @@ export function CheckboxGroup({
       <div
         className={cn(
           "flex flex-col gap-1.5",
-          visible.length > 8 && "max-h-72 overflow-y-auto pr-1",
+          visible.length > 8 && "scrollbar-none max-h-72 overflow-y-auto pr-1",
           className,
         )}
       >

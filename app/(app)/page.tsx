@@ -1,5 +1,7 @@
 import { ArrowRight, Compass, Flame, Sparkles } from "lucide-react";
 
+import { CompactProgressCard } from "@/components/learn/compact-progress-card";
+import { hubCourseToProgressViewModel } from "@/components/learn/view-models";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,6 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireUser } from "@/lib/auth/require-user";
+import { getMostRecentActiveLearnerCourse } from "@/lib/db/learn";
 import { getShellProfile } from "@/lib/db/profile";
 import { listRecommendationsForUser } from "@/lib/db/recommendations";
 import { getCurrentUserStats } from "@/lib/db/stats";
@@ -19,10 +22,11 @@ import Link from "next/link";
 
 export default async function AppHome() {
   const user = await requireUser();
-  const [shell, stats, recommendations] = await Promise.all([
+  const [shell, stats, recommendations, activeCourse] = await Promise.all([
     getShellProfile(user.id),
     getCurrentUserStats(user.id),
     listRecommendationsForUser(user.id, 8),
+    getMostRecentActiveLearnerCourse(user.id),
   ]);
   const greeting = shell.displayName ?? shell.email.split("@")[0] ?? "there";
 
@@ -73,22 +77,31 @@ export default async function AppHome() {
         <div className="flex items-baseline justify-between">
           <h2 className="text-base font-semibold">Continue learning</h2>
           <span className="text-muted-foreground text-xs">
-            Lights up after your first module.
+            {activeCourse
+              ? "Your most recent active course."
+              : "Enroll in a course to begin."}
           </span>
         </div>
         <div className="grid gap-3 md:grid-cols-3">
-          {[0, 1, 2].map((i) => (
-            <Card key={i} className="border-border/60">
-              <CardHeader>
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="mt-2 h-5 w-3/4" />
+          {activeCourse ? (
+            <CompactProgressCard
+              progress={hubCourseToProgressViewModel(activeCourse)}
+            />
+          ) : (
+            <Card className="border-border/60">
+              <CardHeader className="space-y-2 px-3 py-3">
+                <CardTitle className="text-sm">No active course yet</CardTitle>
+                <CardDescription className="text-xs">
+                  Pick a course and your progress will appear here.
+                </CardDescription>
               </CardHeader>
-              <CardContent>
-                <Skeleton className="h-2 w-full rounded-full" />
-                <Skeleton className="mt-3 h-3 w-1/3" />
+              <CardContent className="px-3 pb-3">
+                <Button asChild size="xs" variant="outline">
+                  <Link href="/courses">Browse courses</Link>
+                </Button>
               </CardContent>
             </Card>
-          ))}
+          )}
         </div>
       </section>
 

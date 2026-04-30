@@ -1,14 +1,21 @@
+import Image from "next/image";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import {
   ArrowRight,
   BookOpen,
   Compass,
+  Cpu,
   GraduationCap,
+  Layers3,
+  Library,
   Notebook,
   Sparkles,
   Trophy,
 } from "lucide-react";
 
+import { CourseCard } from "@/components/courses/course-card";
+import { courseToCardViewModel } from "@/components/learn/view-models";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -17,14 +24,19 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { listPeople, listLibraries, listPapers } from "@/lib/db/entities";
+import { listPublishedCourseCatalog, type CourseCatalogItem } from "@/lib/db/learn";
+import type { EntitySummary } from "@/types/domain";
 
-export default function MarketingHome() {
+export default async function MarketingHome() {
+  const { courses, entities } = await getWelcomeData();
+
   return (
     <>
       <section className="relative overflow-hidden">
         <div
           aria-hidden
-          className="from-primary/15 via-accent/10 to-background absolute inset-0 -z-10 bg-gradient-to-br"
+          className="from-primary/15 via-accent/10 to-background absolute inset-0 -z-10 bg-linear-to-br"
         />
         <div
           aria-hidden
@@ -34,57 +46,170 @@ export default function MarketingHome() {
           aria-hidden
           className="bg-accent/15 absolute -bottom-40 -left-32 -z-10 size-96 rounded-full blur-3xl"
         />
-        <div className="mx-auto max-w-6xl px-6 pt-24 pb-20 md:pt-32 md:pb-28">
-          <div className="border-border/70 bg-background/60 text-muted-foreground inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs backdrop-blur">
-            <Sparkles className="text-primary size-3.5" />
-            <span>An open learning platform for AI engineers</span>
+        <div className="mx-auto grid max-w-6xl gap-10 px-6 pt-24 pb-20 md:pt-32 md:pb-28 lg:grid-cols-[minmax(0,1fr)_30rem] lg:items-center">
+          <div>
+            <div className="border-border/70 bg-background/60 text-muted-foreground inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs backdrop-blur">
+              <Sparkles className="text-primary size-3.5" />
+              <span>A learning map for modern AI engineering</span>
+            </div>
+            <h1 className="mt-6 max-w-3xl text-4xl font-semibold tracking-tight text-balance md:text-6xl">
+              Grow from prompts to{" "}
+              <span className="from-primary to-accent bg-linear-to-br bg-clip-text text-transparent">
+                production agents.
+              </span>
+            </h1>
+            <p className="text-muted-foreground mt-5 max-w-2xl text-lg text-balance">
+              Explore the people, libraries, papers, talks, and courses shaping
+              AI engineering. Follow structured paths, save what matters, and
+              build toward real agentic systems.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              <Button asChild size="lg">
+                <Link href="/login">
+                  Start learning
+                  <ArrowRight className="size-4" />
+                </Link>
+              </Button>
+              <Button asChild size="lg" variant="ghost">
+                <a href="#courses">Explore the path</a>
+              </Button>
+            </div>
           </div>
-          <h1 className="mt-6 max-w-3xl text-4xl font-semibold tracking-tight text-balance md:text-6xl">
-            Build like an{" "}
-            <span className="from-primary to-accent bg-gradient-to-br bg-clip-text text-transparent">
-              AI engineer.
-            </span>
-          </h1>
-          <p className="text-muted-foreground mt-5 max-w-2xl text-lg text-balance">
-            Explore the people, libraries, talks, papers, and products
-            shaping AI engineering. Take notes that link to everything.
-            Learn through courses with hands-on challenges in a real
-            sandbox.
-          </p>
-          <div className="mt-8 flex flex-wrap items-center gap-3">
-            <Button asChild size="lg">
-              <Link href="/login">
-                Get started
-                <ArrowRight className="size-4" />
-              </Link>
+          <Card className="border-border/60 bg-card/70 overflow-hidden shadow-2xl">
+            <div className="relative aspect-4/3">
+              <Image
+                src="/tokens-to-agents-hero.png"
+                alt="Illustration of AI engineering evolving from token prediction into agentic systems"
+                fill
+                priority
+                sizes="(min-width: 1024px) 30rem, 100vw"
+                className="object-cover"
+              />
+            </div>
+          </Card>
+        </div>
+      </section>
+
+      <section
+        id="courses"
+        className="mx-auto max-w-6xl space-y-6 px-6 pb-20"
+      >
+        <SectionHeading
+          eyebrow="Featured courses"
+          title="Start with a guided path"
+          body="Published course paths turn the AI engineering landscape into a sequence you can actually follow."
+          action={
+            <Button asChild variant="ghost">
+              <Link href="/courses">Browse all courses</Link>
             </Button>
-            <Button asChild size="lg" variant="ghost">
-              <a href="#explore">Tour the platform</a>
-            </Button>
+          }
+        />
+        {courses.length > 0 ? (
+          <div className="grid gap-4 md:grid-cols-3">
+            {courses.map((item) => (
+              <CourseCard
+                key={item.course.course_id}
+                course={courseToCardViewModel(item)}
+              />
+            ))}
           </div>
+        ) : (
+          <Card className="border-border/60">
+            <CardContent>
+              <p className="text-muted-foreground text-sm">
+                Published courses will appear here as the catalog grows.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+      </section>
+
+      <section className="border-border/60 bg-card/40 border-y">
+        <div className="mx-auto grid max-w-6xl gap-10 px-6 py-16 lg:grid-cols-[minmax(0,1fr)_28rem] lg:items-center">
+          <div>
+            <SectionHeading
+              eyebrow="From prediction to agency"
+              title="See the whole evolution"
+              body="AI engineering is no longer just model prompting. It now spans context, tools, memory, evaluation, workflows, and product judgment."
+            />
+            <div className="mt-8 grid gap-4 sm:grid-cols-2">
+              <FeatureCard
+                icon={<Cpu className="text-primary size-5" />}
+                title="Understand the foundations"
+                body="Build intuition for models, context windows, embeddings, and the limits that shape product behavior."
+                tag="Models"
+              />
+              <FeatureCard
+                icon={<Layers3 className="text-primary size-5" />}
+                title="Connect the system"
+                body="Learn how tools, memory, retrieval, evaluation, and human workflows fit around the model."
+                tag="Systems"
+              />
+            </div>
+          </div>
+          <Card className="border-border/60 bg-background/70 overflow-hidden">
+            <div className="relative aspect-4/3">
+              <Image
+                src="/ai-engineering-knowledge-map.png"
+                alt="Illustration of AI engineering courses, papers, libraries, people, and challenges connected as a learning map"
+                fill
+                sizes="(min-width: 1024px) 28rem, 100vw"
+                className="object-cover"
+              />
+            </div>
+          </Card>
         </div>
       </section>
 
       <section
         id="explore"
-        className="mx-auto grid max-w-6xl gap-4 px-6 pb-20 md:grid-cols-3"
+        className="mx-auto max-w-6xl space-y-6 px-6 py-20"
       >
+        <SectionHeading
+          eyebrow="Live ecosystem"
+          title="Explore real AI engineering references"
+          body="The welcome page can surface actual entries from the app so visitors see the corpus, not a placeholder pitch."
+          action={
+            <Button asChild variant="ghost">
+              <Link href="/explore">Open explore</Link>
+            </Button>
+          }
+        />
+        {entities.length > 0 ? (
+          <div className="grid gap-4 md:grid-cols-3">
+            {entities.map((entity) => (
+              <EntityPreviewCard key={`${entity.kind}:${entity.id}`} entity={entity} />
+            ))}
+          </div>
+        ) : (
+          <Card className="border-border/60">
+            <CardContent>
+              <p className="text-muted-foreground text-sm">
+                Featured people, libraries, and papers will appear here when the
+                public corpus is available.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+      </section>
+
+      <section className="mx-auto grid max-w-6xl gap-4 px-6 pb-20 md:grid-cols-3">
         <FeatureCard
           icon={<Compass className="text-primary size-5" />}
-          title="Explore the ecosystem"
-          body="Search across people, organizations, libraries, papers, talks, videos, and events with a single command palette."
+          title="Discover the field"
+          body="Move through the people, organizations, libraries, papers, talks, products, and events defining AI engineering."
           tag="Discovery"
         />
         <FeatureCard
           icon={<Notebook className="text-primary size-5" />}
-          title="Capture what matters"
-          body="Save, follow, and take rich notes that link back to the entities they reference. Your second brain, organized by the corpus."
+          title="Keep useful context"
+          body="Save references, follow topics, and take notes that stay connected to the source material you care about."
           tag="Knowledge"
         />
         <FeatureCard
           icon={<GraduationCap className="text-primary size-5" />}
-          title="Learn by shipping"
-          body="Follow guided courses, complete modules with mini-quizzes, and finish with hands-on challenges that grade your code."
+          title="Practice with purpose"
+          body="Follow courses, complete modules, and build toward hands-on challenges that turn concepts into skill."
           tag="Curriculum"
         />
       </section>
@@ -93,40 +218,39 @@ export default function MarketingHome() {
         <div className="mx-auto grid max-w-6xl gap-10 px-6 py-16 md:grid-cols-2 md:items-center">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">
-              A grounded assistant, with citations.
+              A learning companion for the agent era.
             </h2>
             <p className="text-muted-foreground mt-3 text-balance">
-              Every answer points back to a chunk of the corpus — a
-              talk timestamp, a paper section, a library doc — so you
-              can verify, save, or note anything the assistant
-              suggests.
+              The best AI engineers learn across research, tools, product
+              examples, and implementation practice. The app brings those
+              threads together so each session can move you forward.
             </p>
             <ul className="text-muted-foreground mt-6 grid gap-3 text-sm">
               <FeatureBullet icon={<BookOpen className="size-4" />}>
-                Hybrid retrieval (FTS + vectors) over a curated corpus.
+                Trace ideas back to papers, talks, libraries, and product examples.
               </FeatureBullet>
               <FeatureBullet icon={<Trophy className="size-4" />}>
-                XP, streaks, and a leaderboard make progress visible.
+                Track momentum with course progress, XP, and learning history.
               </FeatureBullet>
               <FeatureBullet icon={<Sparkles className="size-4" />}>
-                AI tools that can save, follow, and enroll on your behalf — with audit.
+                Turn scattered discoveries into a personal path through the field.
               </FeatureBullet>
             </ul>
           </div>
-          <Card className="border-border/60 from-primary/5 via-card to-accent/5 bg-gradient-to-br">
+          <Card className="border-border/60 from-primary/5 via-card to-accent/5 bg-linear-to-br">
             <CardHeader>
-              <CardTitle>Five layers, one stack</CardTitle>
+              <CardTitle>Your path from models to agents</CardTitle>
               <CardDescription>
-                Pick your altitude — from foundation models all the way up to governance.
+                Learn the layers that turn raw model capability into useful AI products.
               </CardDescription>
             </CardHeader>
             <CardContent className="grid grid-cols-5 gap-2 text-center text-xs">
               {[
-                { code: "L1", label: "Intelligence" },
-                { code: "L2", label: "Agents" },
-                { code: "L3", label: "Systems" },
-                { code: "L4", label: "Application" },
-                { code: "L5", label: "Governance" },
+                { code: "01", label: "Models" },
+                { code: "02", label: "Context" },
+                { code: "03", label: "Tools" },
+                { code: "04", label: "Agents" },
+                { code: "05", label: "Products" },
               ].map((layer) => (
                 <div
                   key={layer.code}
@@ -150,7 +274,8 @@ export default function MarketingHome() {
           Ready to start exploring?
         </h2>
         <p className="text-muted-foreground mx-auto mt-3 max-w-xl text-balance">
-          One magic-link sign-in. Onboarding takes about ninety seconds.
+          Start with a course, follow the ideas that catch your attention, and
+          build your way toward production-grade agents.
         </p>
         <Button asChild size="lg" className="mt-6">
           <Link href="/login">
@@ -163,13 +288,66 @@ export default function MarketingHome() {
   );
 }
 
+async function getWelcomeData(): Promise<{
+  courses: CourseCatalogItem[];
+  entities: EntitySummary[];
+}> {
+  const [coursesResult, peopleResult, librariesResult, papersResult] =
+    await Promise.allSettled([
+      listPublishedCourseCatalog({ limit: 3 }),
+      listPeople({ limit: 2 }),
+      listLibraries({ limit: 2 }),
+      listPapers({ limit: 2 }),
+    ]);
+
+  return {
+    courses: settledValue(coursesResult).slice(0, 3),
+    entities: [
+      ...settledValue(peopleResult),
+      ...settledValue(librariesResult),
+      ...settledValue(papersResult),
+    ].slice(0, 6),
+  };
+}
+
+function settledValue<T>(result: PromiseSettledResult<T[]>): T[] {
+  return result.status === "fulfilled" ? result.value : [];
+}
+
+function SectionHeading({
+  eyebrow,
+  title,
+  body,
+  action,
+}: {
+  eyebrow: string;
+  title: string;
+  body: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <div className="max-w-2xl">
+        <p className="text-primary text-xs font-semibold tracking-[0.2em] uppercase">
+          {eyebrow}
+        </p>
+        <h2 className="mt-2 text-2xl font-semibold tracking-tight md:text-3xl">
+          {title}
+        </h2>
+        <p className="text-muted-foreground mt-3 text-balance">{body}</p>
+      </div>
+      {action ? <div className="shrink-0">{action}</div> : null}
+    </div>
+  );
+}
+
 function FeatureCard({
   icon,
   title,
   body,
   tag,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   title: string;
   body: string;
   tag: string;
@@ -196,8 +374,8 @@ function FeatureBullet({
   icon,
   children,
 }: {
-  icon: React.ReactNode;
-  children: React.ReactNode;
+  icon: ReactNode;
+  children: ReactNode;
 }) {
   return (
     <li className="flex items-start gap-3">
@@ -207,4 +385,46 @@ function FeatureBullet({
       <span>{children}</span>
     </li>
   );
+}
+
+function EntityPreviewCard({ entity }: { entity: EntitySummary }) {
+  const description =
+    entity.description ?? entity.subtitle ?? "A reference from the AI engineering map.";
+
+  return (
+    <Card className="border-border/60 hover:border-primary/40 h-full transition-colors">
+      <CardHeader className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="bg-primary/10 text-primary inline-flex size-9 items-center justify-center rounded-lg">
+            <Library className="size-5" />
+          </div>
+          <span className="text-muted-foreground text-xs uppercase tracking-wider">
+            {formatKind(entity.kind)}
+          </span>
+        </div>
+        <div className="space-y-1.5">
+          <CardTitle className="line-clamp-2 text-lg">{entity.title}</CardTitle>
+          {entity.subtitle ? (
+            <CardDescription className="line-clamp-1">
+              {entity.subtitle}
+            </CardDescription>
+          ) : null}
+        </div>
+      </CardHeader>
+      <CardContent className="flex h-full flex-col justify-between gap-4">
+        <p className="text-muted-foreground line-clamp-3 text-sm">{description}</p>
+        <Button asChild size="sm" variant="outline" className="self-start">
+          <Link href={entity.href}>View reference</Link>
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function formatKind(kind: EntitySummary["kind"]): string {
+  return kind
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part[0].toUpperCase() + part.slice(1))
+    .join(" ");
 }
