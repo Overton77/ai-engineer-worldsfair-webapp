@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 
 import { CorpusSection } from "@/components/dossier/corpus-section";
 import { DossierHero } from "@/components/dossier/dossier-hero";
-import { EntityNotesFooter } from "@/components/dossier/notes-placeholder";
 import { RelationshipSection } from "@/components/dossier/relationship-section";
 import { NotesSplitShell } from "@/components/notes/notes-split-shell";
 import { Separator } from "@/components/ui/separator";
@@ -48,7 +47,7 @@ export default async function TalkDossierPage({ params }: TalkPageProps) {
       entityRef={{ ...entityRef, title: entityTitle }}
       className="mx-auto max-w-7xl"
     >
-    <div className="mx-auto flex max-w-5xl flex-col gap-6">
+      <div className="flex w-full flex-col gap-6">
       <DossierHero
         kind="session"
         entityId={session.session_id}
@@ -56,6 +55,8 @@ export default async function TalkDossierPage({ params }: TalkPageProps) {
         initialSaved={ssState.saved.has(k)}
         initialFollowing={ssState.following.has(k)}
         notesCount={notesCtx.count}
+        notes={notesCtx.notes}
+        useNotesMenu
         supportsSplit
         title={session.title ?? session.slug}
         subtitle={session.track ?? session.session_format ?? null}
@@ -119,17 +120,7 @@ export default async function TalkDossierPage({ params }: TalkPageProps) {
         </Section>
       ) : null}
 
-      <Section title="Notes">
-        <EntityNotesFooter
-          entity={{
-            kind: "session",
-            id: session.session_id,
-            title: entityTitle,
-          }}
-          notes={notesCtx.notes}
-        />
-      </Section>
-    </div>
+      </div>
     </NotesSplitShell>
   );
 }

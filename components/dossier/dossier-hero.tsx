@@ -2,6 +2,7 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
 import { AssistantPlaceholderButton } from "./assistant-placeholder-button";
+import { DossierNotesMenu } from "./dossier-notes-menu";
 import { DossierNotesToggle } from "./notes-toggle";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +11,7 @@ import { FollowButton } from "@/components/save-follow/follow-button";
 import { NoteButton } from "@/components/save-follow/note-button";
 import { SaveButton } from "@/components/save-follow/save-button";
 import { cn } from "@/lib/utils";
+import type { NoteSummary } from "@/lib/notes/types";
 import type { EntityKind, FollowEntityKind } from "@/lib/schema/entity-kind";
 
 import { EntityKindChip } from "../explore/entity-kind-chip";
@@ -35,8 +37,12 @@ type DossierHeroProps = {
   initialFollowing?: boolean;
   /** Notes count badge for the Note button (e.g. "Note (3)"). */
   notesCount?: number;
+  /** Recently updated notes pinned to this dossier entity. */
+  notes?: readonly NoteSummary[];
   /** Where this entity lives — used as the click-through on follow notifications. */
   href?: string;
+  /** When true, replace legacy Note/Notes controls with the dossier notes menu. */
+  useNotesMenu?: boolean;
   /** When true, render the [║ Notes] split-toggle next to the action buttons. */
   supportsSplit?: boolean;
   /** Default layout for split toggle ("split" or "theatre" for video). */
@@ -67,7 +73,9 @@ export function DossierHero({
   initialSaved = false,
   initialFollowing = false,
   notesCount = 0,
+  notes = [],
   href,
+  useNotesMenu = false,
   supportsSplit = false,
   defaultLayout = "split",
 }: DossierHeroProps) {
@@ -171,17 +179,27 @@ export function DossierHero({
             }}
             initialFollowing={initialFollowing}
           />
-          <NoteButton
-            entity={{ kind, id: entityId, title }}
-            count={notesCount}
-          />
-          {supportsSplit ? (
-            <DossierNotesToggle
-              entityKind={kind}
-              count={notesCount}
-              defaultLayout={defaultLayout}
+          {useNotesMenu ? (
+            <DossierNotesMenu
+              entity={{ kind, id: entityId, title }}
+              notesCount={notesCount}
+              notes={notes}
             />
-          ) : null}
+          ) : (
+            <>
+              <NoteButton
+                entity={{ kind, id: entityId, title }}
+                count={notesCount}
+              />
+              {supportsSplit ? (
+                <DossierNotesToggle
+                  entityKind={kind}
+                  count={notesCount}
+                  defaultLayout={defaultLayout}
+                />
+              ) : null}
+            </>
+          )}
           <AssistantPlaceholderButton title={title} />
         </div>
       </div>

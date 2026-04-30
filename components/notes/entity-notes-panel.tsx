@@ -29,6 +29,8 @@ type EntityNotesPanelProps = {
   videoCtx?: NoteEditorVideoCtx;
   /** When true, hide the picker list to focus on the editor. */
   hideList?: boolean;
+  /** When true, choose a sensible note when the panel opens with none selected. */
+  autoSelectNote?: boolean;
   className?: string;
 };
 
@@ -47,6 +49,7 @@ export function EntityNotesPanel({
   onActiveNoteChange,
   videoCtx,
   hideList = false,
+  autoSelectNote = false,
   className,
 }: EntityNotesPanelProps) {
   const [notes, setNotes] = React.useState<NoteSummary[]>([]);
@@ -56,6 +59,11 @@ export function EntityNotesPanel({
   );
   const [loadingEditor, setLoadingEditor] = React.useState(false);
   const editorRef = React.useRef<NoteEditorHandle | null>(null);
+  const validActiveNoteId = isUuid(activeNoteId) ? activeNoteId : null;
+  const memoryKey = React.useMemo(
+    () => `aie:notes-selected:${entityRef.kind}:${entityRef.id}`,
+    [entityRef.kind, entityRef.id],
+  );
 
   // Load list of notes for this entity (and refetch when the active note changes
   // — the just-edited note might've changed its preview / title).
@@ -73,15 +81,48 @@ export function EntityNotesPanel({
     refreshList();
   }, [refreshList]);
 
+  React.useEffect(() => {
+    if (!autoSelectNote || loadingList) return;
+
+    const activeExists =
+      validActiveNoteId !== null && notes.some((n) => n.id === validActiveNoteId);
+    if (activeExists) {
+      writeRememberedNote(memoryKey, validActiveNoteId);
+      return;
+    }
+
+    if (notes.length === 0) {
+      if (activeNoteId) onActiveNoteChange(null);
+      return;
+    }
+
+    const remembered = readRememberedNote(memoryKey);
+    const rememberedExists =
+      remembered !== null && notes.some((n) => n.id === remembered);
+    const nextId = rememberedExists ? remembered : notes[0]?.id;
+
+    if (nextId && nextId !== validActiveNoteId) {
+      onActiveNoteChange(nextId);
+    }
+  }, [
+    activeNoteId,
+    autoSelectNote,
+    loadingList,
+    memoryKey,
+    notes,
+    onActiveNoteChange,
+    validActiveNoteId,
+  ]);
+
   // Bootstrap the editor when activeNoteId changes
   React.useEffect(() => {
-    if (!activeNoteId) {
+    if (!validActiveNoteId) {
       setEditorBoot(null);
       return;
     }
     let cancelled = false;
     setLoadingEditor(true);
-    bootstrapDrawerAction({ mode: "existing", noteId: activeNoteId })
+    bootstrapDrawerAction({ mode: "existing", noteId: validActiveNoteId })
       .then((res) => {
         if (cancelled) return;
         setEditorBoot(res);
@@ -95,7 +136,7 @@ export function EntityNotesPanel({
     return () => {
       cancelled = true;
     };
-  }, [activeNoteId]);
+  }, [validActiveNoteId]);
 
   const onCreate = async () => {
     const result = await createNoteAction({
@@ -141,7 +182,7 @@ export function EntityNotesPanel({
                 onClick={() => onActiveNoteChange(n.id)}
                 className={cn(
                   "rounded-md px-2 py-1.5 text-left transition-colors",
-                  n.id === activeNoteId
+                  n.id === validActiveNoteId
                     ? "bg-muted"
                     : "hover:bg-muted/60",
                 )}
@@ -164,7 +205,7 @@ export function EntityNotesPanel({
       ) : null}
 
       <div className="min-h-0 flex-1">
-        {!activeNoteId ? (
+        {!validActiveNoteId ? (
           <EmptyEditor
             entityTitle={entityRef.title}
             onCreate={onCreate}
@@ -239,4 +280,31 @@ function short(iso: string): string {
   if (h < 48) return `${h}h`;
   const d = Math.round(h / 24);
   return `${d}d`;
+}
+
+function isUuid(value: string | null): value is string {
+  return (
+    typeof value === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      value,
+    )
+  );
+}
+
+function readRememberedNote(key: string): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeRememberedNote(key: string, noteId: string) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(key, noteId);
+  } catch {
+    // ignore storage failures in private browsing modes
+  }
 }

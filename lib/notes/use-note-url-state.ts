@@ -58,6 +58,29 @@ export function useNoteUrlState() {
     notes,
     pinTo,
     /** Open drawer with an existing note id. */
+    openDrawerNote: (id: string) =>
+      setParams({ notes: null, note: id, pinTo: "" }),
+    /** Open drawer creating a new note pinned to <ref>. */
+    openDrawerNewNote: (ref?: { kind: EntityKind; id: string } | null) =>
+      setParams({
+        notes: null,
+        note: "new",
+        pinTo: ref ? encodePinTo(ref) : "",
+      }),
+    /** Select an existing note in the inline panel without waking the drawer. */
+    openPanelNote: (id: string, layout: NotesLayoutParam = "split") =>
+      setParams({ notes: notes ?? layout, note: id, pinTo: "" }),
+    /** Open the inline panel without selecting a note yet. */
+    openPanel: (layout: NotesLayoutParam = "split") =>
+      setParams({ notes: notes ?? layout, pinTo: "" }),
+    /** Clear active note state while leaving the inline panel open. */
+    clearPanelNote: () => setParams({ note: "", pinTo: "" }),
+    /** Close the inline panel and clear drawer-triggering note params too. */
+    closePanelAndNote: () =>
+      setParams({ notes: null, note: "", pinTo: "" }),
+    setPanelLayout: (next: NotesLayoutParam | null) =>
+      setParams({ notes: next }),
+    /** Open drawer with an existing note id. */
     openNote: (id: string) =>
       setParams({ note: id, pinTo: "" }),
     /** Open drawer creating a new note pinned to <ref>. */

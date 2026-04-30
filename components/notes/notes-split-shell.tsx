@@ -36,9 +36,16 @@ export function NotesSplitShell({
   children,
   className,
 }: NotesSplitShellProps) {
-  const { notes, note, openNote } = useNoteUrlState();
+  const { notes, note, openPanelNote, clearPanelNote } = useNoteUrlState();
   const isOpen = notes === "split" || notes === "focus";
+  const activeNoteId = isUuid(note) ? note : null;
   const isWide = useIsWide();
+
+  React.useEffect(() => {
+    if (isOpen && note && !activeNoteId) {
+      clearPanelNote();
+    }
+  }, [activeNoteId, clearPanelNote, isOpen, note]);
 
   if (!isOpen) {
     return <div className={className}>{children}</div>;
@@ -56,9 +63,9 @@ export function NotesSplitShell({
         className="min-h-0 flex-1"
       >
         <ResizablePanel
-          defaultSize={isWide ? "62%" : "58%"}
-          minSize="35%"
-          maxSize="80%"
+          defaultSize={isWide ? 62 : 58}
+          minSize={isWide ? 52 : 35}
+          maxSize={80}
         >
           <div
             className={cn(
@@ -70,11 +77,18 @@ export function NotesSplitShell({
           </div>
         </ResizablePanel>
         <ResizableHandle withHandle />
-        <ResizablePanel defaultSize={isWide ? "38%" : "42%"} minSize="20%">
+        <ResizablePanel
+          defaultSize={isWide ? 38 : 42}
+          minSize={20}
+          maxSize={isWide ? 48 : 80}
+        >
           <EntityNotesPanel
             entityRef={entityRef}
-            activeNoteId={note}
-            onActiveNoteChange={(id) => openNote(id ?? "")}
+            activeNoteId={activeNoteId}
+            onActiveNoteChange={(id) =>
+              id ? openPanelNote(id) : clearPanelNote()
+            }
+            autoSelectNote
             className={cn(
               "border-border/60 bg-card/40 h-full rounded-xl border",
               isWide ? "ml-4" : "mt-4",
@@ -102,4 +116,13 @@ function useIsWide(): boolean {
   }, []);
 
   return wide;
+}
+
+function isUuid(value: string | null): value is string {
+  return (
+    typeof value === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      value,
+    )
+  );
 }

@@ -10,25 +10,41 @@ type RelationshipRow = {
   items: readonly EntitySummary[];
   /** Optional helper text rendered when items is empty. Defaults to a generic "—". */
   emptyHint?: string;
+  hideWhenEmpty?: boolean;
 };
 
 type RelationshipSectionProps = {
   rows: readonly RelationshipRow[];
   className?: string;
+  variant?: "default" | "sentences";
 };
 
 export function RelationshipSection({
   rows,
   className,
+  variant = "default",
 }: RelationshipSectionProps) {
+  const visibleRows = rows.filter(
+    (row) => !(row.hideWhenEmpty && row.items.length === 0),
+  );
+
+  if (visibleRows.length === 0) return null;
+
   return (
     <div className={cn("flex flex-col gap-3", className)}>
-      {rows.map((row) => (
+      {visibleRows.map((row) => (
         <div
           key={row.label}
-          className="border-border/60 flex flex-col gap-2 rounded-lg border bg-card/50 p-3 sm:flex-row sm:items-baseline sm:gap-4"
+          className="border-border/60 flex min-w-0 flex-col gap-2 rounded-lg border bg-card/50 p-3 sm:flex-row sm:items-baseline sm:gap-4"
         >
-          <div className="text-muted-foreground sm:w-44 sm:shrink-0 text-xs font-semibold tracking-wide uppercase">
+          <div
+            className={cn(
+              "sm:shrink-0",
+              variant === "sentences"
+                ? "text-foreground text-sm font-medium sm:w-64"
+                : "text-muted-foreground text-xs font-semibold tracking-wide uppercase sm:w-44",
+            )}
+          >
             {row.label}
           </div>
           <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">

@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 
 import { CorpusSection } from "@/components/dossier/corpus-section";
 import { DossierHero } from "@/components/dossier/dossier-hero";
-import { EntityNotesFooter } from "@/components/dossier/notes-placeholder";
 import { RelationshipSection } from "@/components/dossier/relationship-section";
 import { NotesSplitShell } from "@/components/notes/notes-split-shell";
 import { Separator } from "@/components/ui/separator";
@@ -36,6 +35,28 @@ export default async function PersonDossierPage({ params }: PersonPageProps) {
   ]);
   const k = refKey(entityRef);
   const entityTitle = person.full_name ?? person.slug;
+  const keyInformationRows = [
+    {
+      label: `${entityTitle} works at`,
+      items: dossier.employedAt,
+      hideWhenEmpty: true,
+    },
+    {
+      label: `${entityTitle} founded`,
+      items: dossier.founded,
+      hideWhenEmpty: true,
+    },
+    {
+      label: `${entityTitle} spoke at`,
+      items: dossier.presentedSessions,
+      hideWhenEmpty: true,
+    },
+    {
+      label: `${entityTitle} attended`,
+      items: dossier.attendedEvents,
+      hideWhenEmpty: true,
+    },
+  ];
   const links = [
     person.github_username
       ? {
@@ -62,7 +83,7 @@ export default async function PersonDossierPage({ params }: PersonPageProps) {
       entityRef={{ ...entityRef, title: entityTitle }}
       className="mx-auto max-w-7xl"
     >
-    <div className="mx-auto flex max-w-5xl flex-col gap-6">
+      <div className="flex w-full flex-col gap-6">
       <DossierHero
         kind="person"
         entityId={person.person_id}
@@ -70,6 +91,8 @@ export default async function PersonDossierPage({ params }: PersonPageProps) {
         initialSaved={ssState.saved.has(k)}
         initialFollowing={ssState.following.has(k)}
         notesCount={notesCtx.count}
+        notes={notesCtx.notes}
+        useNotesMenu
         supportsSplit
         title={person.full_name ?? person.slug}
         subtitle={person.tag_line ?? person.role_title ?? null}
@@ -91,32 +114,11 @@ export default async function PersonDossierPage({ params }: PersonPageProps) {
         backLabel="Back to People"
       />
 
-      <Section title="Relationships">
-        <RelationshipSection
-          rows={[
-            {
-              label: "Works at",
-              items: dossier.employedAt,
-              emptyHint: "No current employer indexed.",
-            },
-            {
-              label: "Founded",
-              items: dossier.founded,
-              emptyHint: "No companies founded.",
-            },
-            {
-              label: "Spoke at",
-              items: dossier.presentedSessions,
-              emptyHint: "No sessions presented.",
-            },
-            {
-              label: "Attended",
-              items: dossier.attendedEvents,
-              emptyHint: "No events attended.",
-            },
-          ]}
-        />
-      </Section>
+      {keyInformationRows.some((row) => row.items.length > 0) ? (
+        <Section title="Key information">
+          <RelationshipSection rows={keyInformationRows} variant="sentences" />
+        </Section>
+      ) : null}
 
       <Section title="In the corpus">
         <CorpusSection
@@ -136,17 +138,7 @@ export default async function PersonDossierPage({ params }: PersonPageProps) {
         />
       </Section>
 
-      <Section title="Notes">
-        <EntityNotesFooter
-          entity={{
-            kind: "person",
-            id: person.person_id,
-            title: entityTitle,
-          }}
-          notes={notesCtx.notes}
-        />
-      </Section>
-    </div>
+      </div>
     </NotesSplitShell>
   );
 }
