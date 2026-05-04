@@ -23,6 +23,10 @@
     "db:migration:list": "npx --yes supabase@latest migration list --workdir ..",
     "db:types": "npx --yes supabase@latest gen types typescript --workdir .. --project-id wkythqbofmckbuoothhn --schema public > types/database.types.ts",
     "db:types:local": "npx --yes supabase@latest gen types typescript --workdir .. --local --schema public > types/database.types.ts",
+    "learning:upload-image": "pnpm exec tsx scripts/upload-learning-image.ts",
+    "cursor:models": "pnpm exec tsx scripts/cursor-agent-orchestration-smoke.ts models",
+    "cursor:smoke": "pnpm exec tsx scripts/cursor-agent-orchestration-smoke.ts smoke",
+    "cursor:workflow-smoke": "pnpm exec tsx scripts/cursor-agent-orchestration-smoke.ts workflow",
     "vault:upsert-modules:agent-orchestration": "pnpm exec tsx scripts/upsert-modules.ts --bucket agent_orchestration",
     "vault:upsert-courses:agent-orchestration": "pnpm exec tsx scripts/upsert-courses.ts --bucket agent_orchestration",
     "vault:upsert:agent-orchestration-skills-mini": "pnpm run vault:upsert-modules:agent-orchestration && pnpm run vault:upsert-courses:agent-orchestration"
@@ -30,6 +34,7 @@
   "dependencies": {
     "@ai-sdk/openai": "^3.0.50",
     "@base-ui/react": "^1.3.0",
+    "@cursor/sdk": "^1.0.12",
     "@hookform/resolvers": "^5.2.2",
     "@supabase/ssr": "^0.10.0",
     "@supabase/supabase-js": "^2.101.1",
@@ -46,6 +51,7 @@
     "@tiptap/react": "^3.22.4",
     "@tiptap/starter-kit": "^3.22.4",
     "@tiptap/suggestion": "^3.22.4",
+    "@vercel/blob": "^2.3.3",
     "@vercel/queue": "^0.1.6",
     "ai": "^6.0.146",
     "class-variance-authority": "^0.7.1",
@@ -89,5 +95,10 @@
     "tsx": "^4.21.0",
     "typescript": "^5",
     "vitest": "^4.1.4"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "sqlite3"
+    ]
   }
 }

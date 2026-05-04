@@ -44,7 +44,7 @@ const KIND_TO_TABLE_AND_FIELD: Partial<
   paper: { table: "paper", field: "slug" },
   event: { table: "event", field: "event_id" },
   product: { table: "product", field: "slug" },
-  repo: { table: "repo", field: "repo_id" },
+  repo: { table: "repo", field: "slug" },
   course: { table: "course", field: "slug" },
   course_module: { table: "course_module", field: "slug" },
   challenge: { table: "challenge", field: "slug" },

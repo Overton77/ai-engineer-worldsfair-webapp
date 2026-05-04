@@ -98,7 +98,17 @@ export const MentionPicker = React.forwardRef<MentionPickerHandle, Props>(
               >
                 <button
                   type="button"
-                  onClick={() => onSelect(item)}
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onSelect(item);
+                  }}
+                  onClick={(event) => {
+                    if (event.detail !== 0) return;
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onSelect(item);
+                  }}
                   onMouseEnter={() => setActive(i)}
                   className={cn(
                     "flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors",

@@ -22,6 +22,7 @@ export function CourseCard({ course, className }: CourseCardProps) {
       item={{
         ...course,
         stats,
+        expandableSummary: true,
       }}
       className={className}
     />

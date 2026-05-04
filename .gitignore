@@ -39,6 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 **/scripts/**  
+!scripts/
+!scripts/upload-learning-image.ts
+!scripts/cursor-agent-orchestration-smoke.ts
 
 **/personal_archives/** 
 .vercel

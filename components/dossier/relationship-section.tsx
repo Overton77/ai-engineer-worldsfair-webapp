@@ -53,9 +53,9 @@ export function RelationshipSection({
                 {row.emptyHint ?? "—"}
               </span>
             ) : (
-              row.items.map((entity) => (
+              row.items.map((entity, index) => (
                 <Link
-                  key={`${entity.kind}:${entity.id}`}
+                  key={`${entity.kind}:${entity.id || entity.href}:${index}`}
                   href={entity.href}
                   className="border-border/60 bg-background hover:bg-muted hover:border-border focus-visible:ring-ring/50 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors focus-visible:ring-3 focus-visible:outline-none"
                 >

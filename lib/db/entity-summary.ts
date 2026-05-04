@@ -73,7 +73,8 @@ const KIND_TO_ID_FIELD: Record<EntityKind, keyof AnyEntityRow | "id" | "slug"> =
   paper: "slug",
   report: "report_id",
   news_item: "news_item_id",
-  repo: "repo_id",
+  // `repo` rows use `slug` as the stable id (wire URL `/repo/[slug]`).
+  repo: "slug",
   course: "course_id",
   course_module: "course_module_id",
   challenge: "challenge_id",

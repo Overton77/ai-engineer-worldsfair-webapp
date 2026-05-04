@@ -6,6 +6,8 @@
  *   slug, version, title, status, domain_bucket, domain_layer,
  *   estimated_hours, audience, modules: [{ module: <slug>, role?: <role>,
  *   pinned_version?: <version> }, ...], capstone_challenge: <slug|null>
+ *   Optional summary: short catalog/teaser string; when set, overrides the
+ *   auto-extracted first paragraph after the body H1.
  *
  * Behavior per course:
  *   1. Resolve by (slug, version). INSERT if missing. If present and already
@@ -182,8 +184,12 @@ function relativeFromVaultRoot(absPath: string): string {
   return absPath.replace(/\\/g, "/").slice(idx + 1);
 }
 
+function stripBlockquotePrefix(line: string): string {
+  return line.replace(/^(?:>\s*)+/, "").trim();
+}
+
 function buildSummary(fm: Record<string, unknown>, body: string): string {
-  // First non-heading paragraph after the H1.
+  // First non-heading paragraph after the H1 (blockquote lines normalized).
   const lines = body.split(/\r?\n/);
   let started = false;
   const buf: string[] = [];
@@ -193,9 +199,10 @@ function buildSummary(fm: Record<string, unknown>, body: string): string {
       continue;
     }
     if (l.startsWith("#")) break;
-    if (l.trim() === "" && buf.length === 0) continue;
-    if (l.trim() === "" && buf.length > 0) break;
-    buf.push(l.trim());
+    const normalized = stripBlockquotePrefix(l);
+    if (normalized === "" && buf.length === 0) continue;
+    if (normalized === "" && buf.length > 0) break;
+    buf.push(normalized);
   }
   const summary = buf.join(" ").replace(/\s+/g, " ").trim();
   return summary || String(fm.title ?? "");
@@ -331,6 +338,7 @@ async function upsertOneCourse(
     .eq("version", version)
     .maybeSingle<ExistingCourseRow>();
 
+  const summaryFromFm = asString(c.fm.summary)?.trim();
   const candidate = {
     slug,
     version,
@@ -340,7 +348,10 @@ async function upsertOneCourse(
     domain_bucket: String(c.fm.domain_bucket ?? ""),
     domain_layer: asString(c.fm.domain_layer),
     est_hours: asInt(c.fm.estimated_hours),
-    summary: buildSummary(c.fm, c.body),
+    summary:
+      summaryFromFm && summaryFromFm.length > 0
+        ? summaryFromFm
+        : buildSummary(c.fm, c.body),
     narrative_md: c.body,
     authors: asJson(c.fm.authors) as never,
     metadata: {

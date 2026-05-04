@@ -181,7 +181,9 @@ function CourseHero({
             {compactLabel([
               formatDomain(course.domain_layer),
               formatDomain(course.domain_bucket),
-              isEnrolled ? `Enrolled v${course.version}` : `Published v${course.version}`,
+              isEnrolled
+                ? `Enrolled v${course.version}`
+                : `Published v${course.version}`,
             ])}
           </p>
           <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
@@ -295,23 +297,39 @@ function SyllabusRow({
           <div className="min-w-0 flex-1 space-y-2">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="space-y-1">
-                <h3 className="font-medium leading-snug">{item.module.title}</h3>
+                <h3 className="font-medium leading-snug">
+                  {item.module.title}
+                </h3>
                 <p className="text-muted-foreground text-sm">
                   {moduleSummary(item.module)}
                 </p>
               </div>
-              <Button asChild size="sm" variant={isCompleted ? "outline" : "default"}>
-                <Link href={href}>{isCompleted ? "Review module" : "Open module"}</Link>
+              <Button
+                asChild
+                size="sm"
+                variant={isCompleted ? "outline" : "default"}
+              >
+                <Link href={href}>
+                  {isCompleted ? "Review module" : "Open module"}
+                </Link>
               </Button>
             </div>
             <div className="text-muted-foreground flex flex-wrap gap-2 text-xs">
-              <Badge variant={isCompleted ? "secondary" : "outline"}>{status}</Badge>
-              {item.role ? <Badge variant="outline">{formatDomain(item.role)}</Badge> : null}
+              <Badge variant={isCompleted ? "secondary" : "outline"}>
+                {status}
+              </Badge>
+              {item.role ? (
+                <Badge variant="outline">{formatDomain(item.role)}</Badge>
+              ) : null}
               {item.module.duration_min ? (
-                <Badge variant="outline">{formatMinutes(item.module.duration_min)}</Badge>
+                <Badge variant="outline">
+                  {formatMinutes(item.module.duration_min)}
+                </Badge>
               ) : null}
               {item.module.difficulty ? (
-                <Badge variant="outline">{formatDomain(item.module.difficulty)}</Badge>
+                <Badge variant="outline">
+                  {formatDomain(item.module.difficulty)}
+                </Badge>
               ) : null}
               <Badge variant="outline">{prereqLabel}</Badge>
             </div>
@@ -347,7 +365,9 @@ function EnrollmentCard({
         progress={{
           eyebrow: "Continue course",
           title: course.title,
-          summary: nextModuleTitle ? `Next: ${nextModuleTitle}` : "Review your course path.",
+          summary: nextModuleTitle
+            ? `Next: ${nextModuleTitle}`
+            : "Review your course path.",
           percent: progress.percent,
           progressLabel: `${progress.percent}% complete`,
           stats: [
@@ -374,7 +394,10 @@ function EnrollmentCard({
       <CardContent className="space-y-3">
         <dl className="text-muted-foreground grid gap-2 text-sm">
           <Fact label="Modules" value={String(moduleCount)} />
-          <Fact label="Duration" value={formatMinutes(durationMinutes) ?? "Self-paced"} />
+          <Fact
+            label="Duration"
+            value={formatMinutes(durationMinutes) ?? "Self-paced"}
+          />
           <Fact label="Reward" value={`+${courseXp(course)} XP completion`} />
         </dl>
         <p className="text-muted-foreground text-xs">
@@ -413,10 +436,16 @@ function CourseFactsCard({
         <dl className="grid gap-2 text-sm">
           <Fact label="Difficulty" value={courseDifficulty(syllabus)} />
           <Fact label="Version" value={course.version} />
-          <Fact label="Status" value={formatDomain(course.status) ?? course.status} />
-          <Fact label="Duration" value={formatMinutes(durationMinutes) ?? "Self-paced"} />
+          <Fact
+            label="Status"
+            value={formatDomain(course.status) ?? course.status}
+          />
+          <Fact
+            label="Duration"
+            value={formatMinutes(durationMinutes) ?? "Self-paced"}
+          />
           <Fact label="XP" value={`+${courseXp(course)}`} />
-          <Fact label="Authors" value={formatAuthors(course.authors)} />
+          {/* <Fact label="Authors" value={formatAuthors(course.authors)} /> */}
         </dl>
       </CardContent>
     </Card>
@@ -428,9 +457,7 @@ function PrerequisitesCard({
 }: {
   prerequisites: Map<string, string[]>;
 }) {
-  const labels = Array.from(
-    new Set(Array.from(prerequisites.values()).flat()),
-  );
+  const labels = Array.from(new Set(Array.from(prerequisites.values()).flat()));
 
   return (
     <Card className="border-border/60">
@@ -451,7 +478,8 @@ function PrerequisitesCard({
           <p className="text-sm">None required.</p>
         )}
         <p className="text-muted-foreground text-xs">
-          These are recommendations, not locks. You can open modules out of order.
+          These are recommendations, not locks. You can open modules out of
+          order.
         </p>
       </CardContent>
     </Card>
@@ -494,7 +522,9 @@ function getNextModule(
 function courseOutcomes(course: CourseRow, syllabus: CourseSyllabusItem[]) {
   const objectiveLabels = syllabus
     .flatMap((item) => jsonArray(item.module.learning_objectives))
-    .filter((item): item is string => typeof item === "string" && item.length > 0);
+    .filter(
+      (item): item is string => typeof item === "string" && item.length > 0,
+    );
   const uniqueLabels = Array.from(new Set(objectiveLabels));
   if (uniqueLabels.length > 0) return uniqueLabels.slice(0, 4);
 
@@ -563,7 +593,8 @@ function formatAuthors(value: Json) {
   const authors = jsonArray(value)
     .map((author) => {
       if (typeof author === "string") return author;
-      if (!author || typeof author !== "object" || Array.isArray(author)) return null;
+      if (!author || typeof author !== "object" || Array.isArray(author))
+        return null;
       const row = author as Record<string, Json | undefined>;
       return stringValue(row.name) ?? stringValue(row.title) ?? null;
     })
@@ -600,7 +631,9 @@ function markdownSummary(markdown: string) {
     .split("\n")
     .map((line) => line.trim())
     .find(Boolean);
-  return stripped ?? "Read the challenge brief before runnable challenges arrive.";
+  return (
+    stripped ?? "Read the challenge brief before runnable challenges arrive."
+  );
 }
 
 function jsonArray(value: Json) {
@@ -611,7 +644,9 @@ function numberMetadata(value: Json, key: string) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const metadata = value as Record<string, Json | undefined>;
   const rawValue = metadata[key];
-  return typeof rawValue === "number" && Number.isFinite(rawValue) ? rawValue : null;
+  return typeof rawValue === "number" && Number.isFinite(rawValue)
+    ? rawValue
+    : null;
 }
 
 function stringValue(value: Json | undefined) {

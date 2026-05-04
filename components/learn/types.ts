@@ -18,13 +18,28 @@ export type LearnerCardAction = {
   ariaLabel?: string;
 };
 
+export type LearnerCardImage = {
+  src: string;
+  alt: string;
+  width?: number | null;
+  height?: number | null;
+  dominantColor?: string | null;
+  focalX?: number | null;
+  focalY?: number | null;
+};
+
 export type LearnerCardViewModel = {
+  /** Course-style cards: domain bucket shown as the primary track label. */
+  categoryLabel?: string;
   eyebrow?: string;
   title: string;
   summary: string;
+  image?: LearnerCardImage | null;
   badges?: LearnerMetadataBadge[];
   stats?: LearnerStat[];
   action: LearnerCardAction;
+  /** When true, summary uses a show more / show less control instead of a hard line clamp. */
+  expandableSummary?: boolean;
 };
 
 export type CourseCardViewModel = LearnerCardViewModel & {

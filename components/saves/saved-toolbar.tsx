@@ -1,7 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { parseAsArrayOf, parseAsString, parseAsStringLiteral, useQueryStates } from "nuqs";
+import {
+  parseAsArrayOf,
+  parseAsString,
+  parseAsStringLiteral,
+  useQueryStates,
+} from "nuqs";
 
 import { EntityKindIcon } from "@/components/explore/entity-kind-chip";
 import { Button } from "@/components/ui/button";
@@ -89,7 +94,8 @@ export function SavedToolbar({
         ))}
       </div>
 
-      <div className="flex items-center gap-2">
+      {
+        /* <div className="flex items-center gap-2">
         <span className="text-muted-foreground text-xs">Sort</span>
         <Select
           value={params.sort}
@@ -106,7 +112,9 @@ export function SavedToolbar({
             ))}
           </SelectContent>
         </Select>
-      </div>
+      </div> */
+        // Bring Back sort once we implement functionality
+      }
     </div>
   );
 }

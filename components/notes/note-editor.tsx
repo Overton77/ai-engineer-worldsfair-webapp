@@ -175,7 +175,7 @@ export const NoteEditor = React.forwardRef<NoteEditorHandle, NoteEditorProps>(
 
     const doSave = React.useCallback(async () => {
       if (!editor) return;
-      const json = editor.getJSON() as NoteDoc;
+      const json = sanitizeNoteDoc(editor.getJSON());
       // If the user hasn't typed a title, derive one from the doc so
       // /notes index rows aren't all "Untitled".
       const effectiveTitle =
@@ -379,6 +379,14 @@ function countChars(editor: ReturnType<typeof useEditor> | null): number {
     | { characters?: () => number }
     | undefined;
   return cc?.characters?.() ?? editor.getText().length;
+}
+
+function sanitizeNoteDoc(value: unknown): NoteDoc {
+  return JSON.parse(
+    JSON.stringify(value, (_key, nestedValue) =>
+      typeof nestedValue === "function" ? undefined : nestedValue,
+    ),
+  ) as NoteDoc;
 }
 
 function relTime(iso: string): string {

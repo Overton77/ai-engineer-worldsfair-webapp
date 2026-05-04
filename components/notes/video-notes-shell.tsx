@@ -54,7 +54,8 @@ export function VideoNotesShell({
   chapters,
 }: VideoNotesShellProps) {
   const [t, setT] = useQueryState("t", parseAsInteger.withDefault(0));
-  const { notes, setLayout, note, openNote } = useNoteUrlState();
+  const { notes, setLayout, note, openPanelNote, clearPanelNote } =
+    useNoteUrlState();
   const [layoutPref, setLayoutPref] = useNotesLayout("youtube_video", "off");
   const playerRef = React.useRef<VideoPlayerHandle>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -151,7 +152,7 @@ export function VideoNotesShell({
     // Make sure we're in split so the new note opens inline rather
     // than triggering the global quick-drawer.
     if (layout === "off") setBoth("split");
-    openNote(result.id);
+    openPanelNote(result.id, "split");
     toast.success(`New note for chapter @ ${formatTimestamp(chapter.start_seconds)}`);
   };
 
@@ -179,7 +180,9 @@ export function VideoNotesShell({
       onChapterNote={onChapterNote}
       getCurrentTime={() => playerRef.current?.getCurrentTime() ?? t}
       activeNoteId={note}
-      onActiveNoteChange={(id) => openNote(id ?? "")}
+      onActiveNoteChange={(id) =>
+        id ? openPanelNote(id, layout === "focus" ? "focus" : "split") : clearPanelNote()
+      }
     />
   );
 

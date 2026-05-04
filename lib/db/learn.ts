@@ -38,6 +38,23 @@ export type ModuleUsesArtifactRow =
 export type LearningAssetRow =
   Database["public"]["Tables"]["learning_asset"]["Row"];
 export type ChallengeRow = Database["public"]["Tables"]["challenge"]["Row"];
+export type ImageRow = Database["public"]["Tables"]["image"]["Row"];
+export type ImageAttachmentRow =
+  Database["public"]["Tables"]["image_attachment"]["Row"];
+
+type ImageAttachmentWithImage = ImageAttachmentRow & {
+  image: ImageRow | null;
+};
+
+export type CatalogCardImage = {
+  src: string;
+  alt: string;
+  width: number | null;
+  height: number | null;
+  dominantColor: string | null;
+  focalX: number | null;
+  focalY: number | null;
+};
 
 export type CourseSyllabusItem = CourseModuleInCourseRow & {
   module: CourseModuleRow;
@@ -81,6 +98,7 @@ export type CourseCatalogItem = {
   course: CourseRow;
   moduleCount: number;
   durationMinutes: number | null;
+  cardImage: CatalogCardImage | null;
 };
 
 export type ModuleCatalogItem = {
@@ -286,6 +304,11 @@ export async function listPublishedCourseCatalog(
       ? []
       : await listModulesByIds(moduleIds, sb, "listPublishedCourseCatalog.modules");
   const moduleById = new Map(modules.map((row) => [row.module_id, row]));
+  const cardImageByCourseId = await listCardImagesByEntity(
+    sb,
+    "course",
+    courseIds,
+  );
 
   const summaryByCourse = new Map<
     string,
@@ -307,6 +330,7 @@ export async function listPublishedCourseCatalog(
       moduleCount: summary?.moduleCount ?? 0,
       durationMinutes:
         summary && summary.durationMinutes > 0 ? summary.durationMinutes : null,
+      cardImage: cardImageByCourseId.get(course.course_id) ?? null,
     };
   });
 }
@@ -329,6 +353,43 @@ export async function getCourseBySlug(
   const { data, error } = await query.maybeSingle();
   if (error) throw dbError("getCourseBySlug", error);
   return data ?? null;
+}
+
+async function listCardImagesByEntity(
+  client: Client,
+  entityKind: "course" | "course_module",
+  entityIds: string[],
+): Promise<Map<string, CatalogCardImage>> {
+  if (entityIds.length === 0) return new Map();
+
+  const { data, error } = await client
+    .from("image_attachment")
+    .select("*, image(*)")
+    .eq("entity_kind", entityKind)
+    .in("entity_id", Array.from(new Set(entityIds)))
+    .in("role", ["card", "cover"])
+    .order("ord", { ascending: true })
+    .returns<ImageAttachmentWithImage[]>();
+  if (error) throw dbError("listCardImagesByEntity", error);
+
+  const out = new Map<string, CatalogCardImage>();
+  for (const attachment of data ?? []) {
+    if (out.has(attachment.entity_id)) continue;
+    const image = attachment.image;
+    const src = image?.cdn_url ?? image?.url;
+    if (!image || !src) continue;
+    out.set(attachment.entity_id, {
+      src,
+      alt: attachment.alt_override ?? image.alt,
+      width: image.width,
+      height: image.height,
+      dominantColor: image.dominant_color,
+      focalX: image.focal_x,
+      focalY: image.focal_y,
+    });
+  }
+
+  return out;
 }
 
 export async function getCourseSyllabus(

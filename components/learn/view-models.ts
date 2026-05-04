@@ -1,5 +1,6 @@
 import type {
   CourseCatalogItem,
+  CatalogCardImage,
   CourseProgressCache,
   CourseRow,
   LearnerHubCourse,
@@ -10,6 +11,7 @@ import type { Json } from "@/types/database.types";
 
 import type {
   CourseCardViewModel,
+  LearnerCardImage,
   LearnerMetadataBadge,
   ModuleCardViewModel,
   ProgressCardViewModel,
@@ -25,13 +27,11 @@ export function courseToCardViewModel(
   const xp = numberMetadata(metadata, "xp") ?? DEFAULT_COURSE_XP;
 
   return {
-    eyebrow: compactLabel([
-      formatDomain(item.course.domain_layer),
-      formatDomain(item.course.domain_bucket),
-      `Published v${item.course.version}`,
-    ]),
+    categoryLabel: formatDomain(item.course.domain_bucket),
+    badges: [{ label: `v${item.course.version}`, variant: "outline" }],
     title: item.course.title,
     summary: item.course.summary ?? "A structured path for production AI learning.",
+    image: catalogImageToViewModel(item.cardImage),
     moduleCount: item.moduleCount,
     durationLabel: formatCourseDuration(item.course, item.durationMinutes),
     xpLabel: `+${xp} XP`,
@@ -41,6 +41,21 @@ export function courseToCardViewModel(
       href: `/courses/${item.course.slug}`,
       ariaLabel: `View course ${item.course.title}`,
     },
+  };
+}
+
+function catalogImageToViewModel(
+  image: CatalogCardImage | null | undefined,
+): LearnerCardImage | null {
+  if (!image) return null;
+  return {
+    src: image.src,
+    alt: image.alt,
+    width: image.width,
+    height: image.height,
+    dominantColor: image.dominantColor,
+    focalX: image.focalX,
+    focalY: image.focalY,
   };
 }
 
