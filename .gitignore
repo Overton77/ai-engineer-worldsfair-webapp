@@ -29,6 +29,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+.runs/
 
 # env files (can opt-in for committing if needed)
 .env*
@@ -42,6 +43,10 @@ yarn-error.log*
 !scripts/
 !scripts/upload-learning-image.ts
 !scripts/cursor-agent-orchestration-smoke.ts
+!scripts/research-ingestion-workflow.ts
+!scripts/research-ingestion-workflow.example.json
+!scripts/research-ingestion-workflow/
+!scripts/research-ingestion-workflow/**
 
 **/personal_archives/** 
 .vercel

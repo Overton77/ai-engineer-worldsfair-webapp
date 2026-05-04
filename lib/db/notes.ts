@@ -84,10 +84,25 @@ export async function listNotesForUser(
   if (args.pinKind) q = q.eq("entity_type", args.pinKind);
   if (args.freeformOnly) q = q.is("entity_type", null);
   if (args.q && args.q.trim()) {
-    q = q.textSearch("fts", args.q.trim(), {
-      type: "websearch",
-      config: "english",
-    });
+    const raw = args.q.trim();
+    // Combine `.or()` clauses so we match either the FTS index (full
+    // words + stemming on title+content_text+entity_title) OR partial
+    // substrings on the same columns. ILIKE covers prefix/partial
+    // queries that websearch_to_tsquery would otherwise miss ("doc"
+    // matching "document"); FTS covers multi-word relevance ranking.
+    // Escape ILIKE wildcard chars so they cannot leak from the user
+    // query, and double-quote PostgREST `or` values so commas/parens
+    // in the search term do not break the filter grammar.
+    const ilikeSafe = raw.replace(/[\\%_]/g, (ch) => `\\${ch}`);
+    const quote = (v: string) => `"${v.replace(/"/g, "")}"`;
+    q = q.or(
+      [
+        `fts.wfts(english).${quote(raw)}`,
+        `title.ilike.${quote(`%${ilikeSafe}%`)}`,
+        `content_text.ilike.${quote(`%${ilikeSafe}%`)}`,
+        `entity_title.ilike.${quote(`%${ilikeSafe}%`)}`,
+      ].join(","),
+    );
   }
 
   q = q.order("updated_at", { ascending: false });

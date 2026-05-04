@@ -1,0 +1,27 @@
+{
+  "workflow": "youtube-research-to-course",
+  "videoId": "CEvIs9y1uog",
+  "bucket": "agent_orchestration",
+  "mission": "Produce entity-grounded research artifacts, verified ingestion, and a pre-course outline.",
+  "vaultRoot": "../aiwiki/ai-intelligence-vault/ai-intelligence",
+  "runtime": {
+    "provider": "cursor-sdk",
+    "model": "composer-2",
+    "maxParallelAgents": 3,
+    "settingSources": []
+  },
+  "safety": {
+    "defaultDryRun": true,
+    "requireDbInspection": true,
+    "stopOnInspectionWarnings": true,
+    "allowSupabaseWrites": false,
+    "runAgents": true,
+    "runTranscript": false,
+    "runIngestion": true,
+    "runSmokeQueries": false,
+    "runBackfill": false
+  },
+  "resume": {
+    "policy": "skip_completed"
+  }
+}

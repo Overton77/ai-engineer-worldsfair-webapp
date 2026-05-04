@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, Pencil, Pin, Plus, Search } from "lucide-react";
+import { ExternalLink, Loader2, Pencil, Pin, Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { parseAsString, useQueryStates } from "nuqs";
@@ -16,8 +16,9 @@ import {
   type EntityKind,
 } from "@/lib/schema/entity-kind";
 import { cn } from "@/lib/utils";
-import { ENTITY_HREF } from "@/types/domain";
 import type { NoteSummary } from "@/lib/notes/types";
+
+export type NoteRowSummary = NoteSummary & { openHref: string };
 
 const PIN_FILTERS: Array<{ id: string; label: string }> = [
   { id: "", label: "All notes" },
@@ -35,11 +36,13 @@ function kindLabel(k: EntityKind): string {
 }
 
 type NotesPageShellProps = {
-  rows: NoteSummary[];
-  recent: NoteSummary[];
+  rows: NoteRowSummary[];
+  recent: NoteRowSummary[];
   initialQuery: string;
   initialPin: string;
 };
+
+const SEARCH_DEBOUNCE_MS = 250;
 
 export function NotesPageShell({
   rows,
@@ -48,13 +51,42 @@ export function NotesPageShell({
   initialPin,
 }: NotesPageShellProps) {
   const router = useRouter();
+  // `shallow: false` is required so changing `q` / `pin` re-runs the
+  // server component and re-queries the DB. Without it the URL updated
+  // but the list stayed on whatever the initial server render returned.
   const [params, setParams] = useQueryStates(
     {
       q: parseAsString.withDefault(initialQuery),
       pin: parseAsString.withDefault(initialPin),
     },
-    { history: "replace" },
+    { history: "replace", shallow: false },
   );
+
+  // Local search state drives the input; we debounce pushes to the
+  // URL so a typed query doesn't fire a server round-trip on every
+  // keystroke.
+  const [localQ, setLocalQ] = React.useState(params.q);
+  const [isPending, startTransition] = React.useTransition();
+
+  React.useEffect(() => {
+    setLocalQ(params.q);
+  }, [params.q]);
+
+  React.useEffect(() => {
+    if (localQ === params.q) return;
+    const t = setTimeout(() => {
+      startTransition(() => {
+        void setParams({ q: localQ });
+      });
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(t);
+  }, [localQ, params.q, setParams]);
+
+  const onPickPin = (id: string) => {
+    startTransition(() => {
+      void setParams({ pin: id });
+    });
+  };
 
   const onCreateFreeform = async () => {
     const result = await createNoteAction({});
@@ -71,12 +103,15 @@ export function NotesPageShell({
         <label className="border-border/60 bg-background flex items-center gap-2 rounded-lg border px-3">
           <Search className="text-muted-foreground size-4" />
           <Input
-            value={params.q}
-            onChange={(e) => setParams({ q: e.target.value })}
+            value={localQ}
+            onChange={(e) => setLocalQ(e.target.value)}
             placeholder="Search notes…"
             aria-label="Search notes"
             className="h-9 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
           />
+          {isPending ? (
+            <Loader2 className="text-muted-foreground size-3 animate-spin" />
+          ) : null}
         </label>
         <Button
           type="button"
@@ -95,7 +130,7 @@ export function NotesPageShell({
             type="button"
             size="xs"
             variant={params.pin === f.id ? "default" : "outline"}
-            onClick={() => setParams({ pin: f.id })}
+            onClick={() => onPickPin(f.id)}
           >
             {f.label}
           </Button>
@@ -133,10 +168,10 @@ export function NotesPageShell({
   );
 }
 
-function NoteCardSmall({ note }: { note: NoteSummary }) {
+function NoteCardSmall({ note }: { note: NoteRowSummary }) {
   return (
     <Link
-      href={openHref(note)}
+      href={note.openHref}
       className="border-border/60 bg-card hover:border-border block rounded-xl border p-3 transition-colors"
     >
       <div className="flex items-center gap-1">
@@ -157,7 +192,7 @@ function NoteCardSmall({ note }: { note: NoteSummary }) {
   );
 }
 
-function NoteRow({ note }: { note: NoteSummary }) {
+function NoteRow({ note }: { note: NoteRowSummary }) {
   const isPinned = note.pinKind && note.pinId;
   return (
     <li className="border-border/60 bg-card hover:border-border flex items-start gap-3 rounded-xl border p-3 transition-colors">
@@ -192,7 +227,7 @@ function NoteRow({ note }: { note: NoteSummary }) {
         ) : null}
         <div className="mt-2 flex gap-1">
           <Button asChild size="xs" variant={isPinned ? "default" : "outline"}>
-            <Link href={openHref(note)}>
+            <Link href={note.openHref}>
               {isPinned ? <ExternalLink className="size-3" /> : null}
               {isPinned ? "Open ↗" : "Open"}
             </Link>
@@ -204,14 +239,6 @@ function NoteRow({ note }: { note: NoteSummary }) {
       </div>
     </li>
   );
-}
-
-function openHref(note: NoteSummary): string {
-  if (note.pinKind && note.pinId) {
-    const dossier = ENTITY_HREF[note.pinKind](note.pinId);
-    return `${dossier}?notes=split&note=${encodeURIComponent(note.id)}`;
-  }
-  return `/notes/${note.id}`;
 }
 
 function EmptyState({ query }: { query: string }) {

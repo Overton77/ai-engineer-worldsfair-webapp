@@ -27,6 +27,10 @@
     "cursor:models": "pnpm exec tsx scripts/cursor-agent-orchestration-smoke.ts models",
     "cursor:smoke": "pnpm exec tsx scripts/cursor-agent-orchestration-smoke.ts smoke",
     "cursor:workflow-smoke": "pnpm exec tsx scripts/cursor-agent-orchestration-smoke.ts workflow",
+    "research:doctor": "pnpm exec tsx scripts/research-ingestion-workflow.ts doctor",
+    "research:plan": "pnpm exec tsx scripts/research-ingestion-workflow.ts plan",
+    "research:run": "pnpm exec tsx scripts/research-ingestion-workflow.ts run",
+    "research:resume": "pnpm exec tsx scripts/research-ingestion-workflow.ts resume",
     "vault:upsert-modules:agent-orchestration": "pnpm exec tsx scripts/upsert-modules.ts --bucket agent_orchestration",
     "vault:upsert-courses:agent-orchestration": "pnpm exec tsx scripts/upsert-courses.ts --bucket agent_orchestration",
     "vault:upsert:agent-orchestration-skills-mini": "pnpm run vault:upsert-modules:agent-orchestration && pnpm run vault:upsert-courses:agent-orchestration"

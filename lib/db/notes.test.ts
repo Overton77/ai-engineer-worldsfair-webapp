@@ -13,6 +13,7 @@ type BuilderCalls = {
   table: string;
   filters: Array<[string, string, unknown]>;
   textSearch: { col: string; q: string; opts?: unknown } | null;
+  or: string | null;
   insert: Record<string, unknown> | null;
   update: Record<string, unknown> | null;
   delete: boolean;
@@ -29,6 +30,7 @@ function buildMock(handlers: Record<string, (c: BuilderCalls) => unknown>) {
       table,
       filters: [],
       textSearch: null,
+      or: null,
       insert: null,
       update: null,
       delete: false,
@@ -73,6 +75,10 @@ function buildMock(handlers: Record<string, (c: BuilderCalls) => unknown>) {
       },
       textSearch: (col: string, q: string, opts: unknown) => {
         c.textSearch = { col, q, opts };
+        return api;
+      },
+      or: (filters: string) => {
+        c.or = filters;
         return api;
       },
       order: (col: string, opts?: { ascending?: boolean }) => {
@@ -158,7 +164,7 @@ describe("notes DAL", () => {
     expect(calls[0].filters).toContainEqual(["user_id", "eq", "u"]);
   });
 
-  it("listNotesForUser issues a websearch FTS textSearch when q is non-empty", async () => {
+  it("listNotesForUser OR-searches FTS + ILIKE on title/content_text/entity_title when q is set", async () => {
     const rows = [
       {
         id: "n1",
@@ -178,11 +184,26 @@ describe("notes DAL", () => {
     );
     expect(out.total).toBe(1);
     expect(out.rows[0].preview).toContain("14:02");
-    expect(calls[0].textSearch).toMatchObject({
-      col: "fts",
-      q: "calibration",
-      opts: { type: "websearch", config: "english" },
-    });
+    expect(calls[0].textSearch).toBeNull();
+    expect(calls[0].or).toContain(`fts.wfts(english)."calibration"`);
+    expect(calls[0].or).toContain(`title.ilike."%calibration%"`);
+    expect(calls[0].or).toContain(`content_text.ilike."%calibration%"`);
+    expect(calls[0].or).toContain(`entity_title.ilike."%calibration%"`);
+  });
+
+  it("listNotesForUser escapes ILIKE wildcards and strips embedded quotes", async () => {
+    const { client, calls } = buildMock({ notes: () => [] });
+    await listNotesForUser(
+      { userId: "u", q: `50% "off"_sale` },
+      client,
+    );
+    // `%` and `_` must be escaped so the literal characters are matched,
+    // and embedded double quotes are stripped (the value is wrapped in
+    // double quotes to survive commas/parens in PostgREST `or`).
+    expect(calls[0].or).toContain(`title.ilike.`);
+    expect(calls[0].or).toContain(`\\%`);
+    expect(calls[0].or).toContain(`\\_`);
+    expect(calls[0].or).not.toContain(`"off"_sale`);
   });
 
   it("listNotesForEntity filters on (kind, id)", async () => {

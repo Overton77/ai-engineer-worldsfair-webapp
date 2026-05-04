@@ -6,7 +6,10 @@ import {
   listNotesForUser,
   listRecentlyEditedNotes,
 } from "@/lib/db/notes";
+import { resolveEntitySummariesByRefs } from "@/lib/db/resolve-entity-summary";
 import { ENTITY_KINDS, type EntityKind } from "@/lib/schema/entity-kind";
+import type { NoteSummary } from "@/lib/notes/types";
+import { ENTITY_HREF } from "@/types/domain";
 
 export const metadata = { title: "Notes" };
 
@@ -39,6 +42,21 @@ export default async function NotesPage({ searchParams }: NotesPageProps) {
     listRecentlyEditedNotes(user.id, 5),
   ]);
 
+  // Resolve slugs for pinned entities so the "Open" button lands on the
+  // canonical dossier URL (e.g. /p/<slug>, /lib/<slug>) instead of the
+  // raw UUID, which would 404 on slug-keyed dossier routes.
+  const refs = dedupeRefs(
+    [...rows, ...recent]
+      .filter((n): n is NoteSummary & { pinKind: EntityKind; pinId: string } =>
+        Boolean(n.pinKind && n.pinId),
+      )
+      .map((n) => ({ kind: n.pinKind, id: n.pinId })),
+  );
+  const summaries = await resolveEntitySummariesByRefs(refs);
+
+  const enrichedRows = rows.map((n) => withOpenHref(n, summaries));
+  const enrichedRecent = recent.map((n) => withOpenHref(n, summaries));
+
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
       <header className="flex items-baseline justify-between gap-3">
@@ -52,11 +70,40 @@ export default async function NotesPage({ searchParams }: NotesPageProps) {
       </header>
 
       <NotesPageShell
-        rows={rows}
-        recent={recent}
+        rows={enrichedRows}
+        recent={enrichedRecent}
         initialQuery={q}
         initialPin={pinKindRaw}
       />
     </div>
   );
+}
+
+function dedupeRefs(
+  refs: ReadonlyArray<{ kind: EntityKind; id: string }>,
+): Array<{ kind: EntityKind; id: string }> {
+  const seen = new Set<string>();
+  const out: Array<{ kind: EntityKind; id: string }> = [];
+  for (const r of refs) {
+    const k = `${r.kind}:${r.id}`;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(r);
+  }
+  return out;
+}
+
+function withOpenHref(
+  note: NoteSummary,
+  summaries: Awaited<ReturnType<typeof resolveEntitySummariesByRefs>>,
+): NoteSummary & { openHref: string } {
+  if (note.pinKind && note.pinId) {
+    const resolved = summaries.get(`${note.pinKind}:${note.pinId}`);
+    const dossierHref = resolved?.href ?? ENTITY_HREF[note.pinKind](note.pinId);
+    return {
+      ...note,
+      openHref: `${dossierHref}?notes=split&note=${encodeURIComponent(note.id)}`,
+    };
+  }
+  return { ...note, openHref: `/notes/${note.id}` };
 }
