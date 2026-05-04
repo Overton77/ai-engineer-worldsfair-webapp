@@ -3,7 +3,6 @@
 import { Loader2, Plus } from "lucide-react";
 import * as React from "react";
 
-import { createNoteAction } from "@/app/actions/notes";
 import {
   bootstrapDrawerAction,
   type DrawerBootstrap,
@@ -58,7 +57,10 @@ export function EntityNotesPanel({
     null,
   );
   const [loadingEditor, setLoadingEditor] = React.useState(false);
+  const [creatingNote, setCreatingNote] = React.useState(false);
   const editorRef = React.useRef<NoteEditorHandle | null>(null);
+  const bootstrappedNoteIdRef = React.useRef<string | null>(null);
+  const listRequestSeqRef = React.useRef(0);
   const validActiveNoteId = isUuid(activeNoteId) ? activeNoteId : null;
   const memoryKey = React.useMemo(
     () => `aie:notes-selected:${entityRef.kind}:${entityRef.id}`,
@@ -68,13 +70,23 @@ export function EntityNotesPanel({
   // Load list of notes for this entity (and refetch when the active note changes
   // — the just-edited note might've changed its preview / title).
   const refreshList = React.useCallback(async () => {
+    const seq = ++listRequestSeqRef.current;
     setLoadingList(true);
-    const res = await listNotesForEntityAction({
-      kind: entityRef.kind,
-      id: entityRef.id,
-    });
-    setNotes(res.rows);
-    setLoadingList(false);
+    try {
+      const res = await listNotesForEntityAction({
+        kind: entityRef.kind,
+        id: entityRef.id,
+      });
+      if (seq === listRequestSeqRef.current) {
+        setNotes(res.rows);
+      }
+    } catch {
+      // Keep the current list; the editor can still load independently.
+    } finally {
+      if (seq === listRequestSeqRef.current) {
+        setLoadingList(false);
+      }
+    }
   }, [entityRef.kind, entityRef.id]);
 
   React.useEffect(() => {
@@ -118,18 +130,27 @@ export function EntityNotesPanel({
   React.useEffect(() => {
     if (!validActiveNoteId) {
       setEditorBoot(null);
+      setLoadingEditor(false);
+      bootstrappedNoteIdRef.current = null;
+      return;
+    }
+    if (bootstrappedNoteIdRef.current === validActiveNoteId) {
+      setLoadingEditor(false);
       return;
     }
     let cancelled = false;
     setLoadingEditor(true);
+    setEditorBoot(null);
     bootstrapDrawerAction({ mode: "existing", noteId: validActiveNoteId })
       .then((res) => {
         if (cancelled) return;
+        bootstrappedNoteIdRef.current = res.ok ? res.noteId : null;
         setEditorBoot(res);
         setLoadingEditor(false);
       })
       .catch(() => {
         if (cancelled) return;
+        bootstrappedNoteIdRef.current = null;
         setEditorBoot({ ok: false, error: "Failed to load note" });
         setLoadingEditor(false);
       });
@@ -139,12 +160,32 @@ export function EntityNotesPanel({
   }, [validActiveNoteId]);
 
   const onCreate = async () => {
-    const result = await createNoteAction({
-      pin: { kind: entityRef.kind, id: entityRef.id, title: entityRef.title },
-    });
-    if (result.ok) {
-      onActiveNoteChange(result.id);
-      refreshList();
+    // Invalidate any in-flight list request so stale rows cannot close
+    // the just-created note via autoSelectNote.
+    listRequestSeqRef.current += 1;
+    setCreatingNote(true);
+    setLoadingEditor(true);
+    setEditorBoot(null);
+    try {
+      const result = await bootstrapDrawerAction({
+        mode: "new",
+        pinTo: { kind: entityRef.kind, id: entityRef.id },
+      });
+      if (result.ok) {
+        bootstrappedNoteIdRef.current = result.noteId;
+        setEditorBoot(result);
+        setNotes(result.notes);
+        setLoadingList(false);
+        writeRememberedNote(memoryKey, result.noteId);
+        onActiveNoteChange(result.noteId);
+        return;
+      }
+      setEditorBoot(result);
+    } catch {
+      setEditorBoot({ ok: false, error: "Failed to create note" });
+    } finally {
+      setCreatingNote(false);
+      setLoadingEditor(false);
     }
   };
 
@@ -161,6 +202,7 @@ export function EntityNotesPanel({
               size="xs"
               variant="ghost"
               onClick={onCreate}
+              disabled={creatingNote}
             >
               <Plus className="size-3" />
               New
@@ -209,7 +251,7 @@ export function EntityNotesPanel({
           <EmptyEditor
             entityTitle={entityRef.title}
             onCreate={onCreate}
-            disabled={loadingList}
+            disabled={loadingList || creatingNote}
           />
         ) : loadingEditor || !editorBoot ? (
           <div className="flex h-full items-center justify-center text-sm text-muted-foreground">

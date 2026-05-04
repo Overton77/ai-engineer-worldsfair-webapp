@@ -15,6 +15,7 @@ import {
   ROLE_BUCKET_LABELS,
   isRoleBucket,
 } from "@/lib/search/people-roles";
+import { OverviewInlineLinks } from "@/lib/text/overview-inline-links";
 import { cn } from "@/lib/utils";
 import type { EntitySummary } from "@/types/domain";
 
@@ -91,12 +92,16 @@ export function PersonCard({
         <div className="mt-3 flex flex-col gap-2">
           <p
             id={`person-overview-${person.id}`}
-            className={cn(
-              "text-muted-foreground text-sm",
-              expanded ? "leading-relaxed" : "line-clamp-4",
-            )}
+            className="text-muted-foreground text-sm"
           >
-            {overview}
+            <span
+              className={cn(
+                expanded ? "leading-relaxed" : "line-clamp-4",
+                "[&_a]:underline [&_a]:decoration-primary/45",
+              )}
+            >
+              <OverviewInlineLinks text={overview} />
+            </span>
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <Button

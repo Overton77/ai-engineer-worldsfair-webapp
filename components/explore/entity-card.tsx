@@ -13,6 +13,7 @@ import {
   ROLE_BUCKET_LABELS,
   isRoleBucket,
 } from "@/lib/search/people-roles";
+import { OverviewInlineLinks } from "@/lib/text/overview-inline-links";
 import { cn } from "@/lib/utils";
 import type { EntitySummary } from "@/types/domain";
 
@@ -196,8 +197,10 @@ export function EntityCard({
             dangerouslySetInnerHTML={{ __html: sanitizeSnippet(snippet) }}
           />
         ) : entity.description ? (
-          <p className="text-muted-foreground mt-2 line-clamp-2 text-sm">
-            {entity.description}
+          <p className="text-muted-foreground mt-2 text-sm">
+            <span className="line-clamp-2 [&_a]:underline [&_a]:decoration-primary/45">
+              <OverviewInlineLinks text={entity.description} />
+            </span>
           </p>
         ) : null}
 

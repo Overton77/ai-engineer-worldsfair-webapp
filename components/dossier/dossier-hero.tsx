@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { FollowButton } from "@/components/save-follow/follow-button";
 import { NoteButton } from "@/components/save-follow/note-button";
 import { SaveButton } from "@/components/save-follow/save-button";
+import { OverviewInlineLinks } from "@/lib/text/overview-inline-links";
 import { cn } from "@/lib/utils";
 import type { NoteSummary } from "@/lib/notes/types";
 import type { EntityKind, FollowEntityKind } from "@/lib/schema/entity-kind";
@@ -134,7 +135,7 @@ export function DossierHero({
           ) : null}
           {description ? (
             <p className="text-foreground/90 mt-3 max-w-[72ch] text-sm leading-6 text-balance">
-              {description}
+              <OverviewInlineLinks text={description} />
             </p>
           ) : null}
 

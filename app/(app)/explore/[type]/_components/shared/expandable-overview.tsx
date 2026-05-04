@@ -4,6 +4,7 @@ import Link from "next/link";
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
+import { OverviewInlineLinks } from "@/lib/text/overview-inline-links";
 import { cn } from "@/lib/utils";
 
 export function ExpandableOverview({
@@ -32,14 +33,16 @@ export function ExpandableOverview({
 
   return (
     <div className={cn("mt-3 flex flex-col gap-2", className)}>
-      <p
-        id={id}
-        className={cn(
-          "text-muted-foreground text-sm",
-          expanded ? "leading-relaxed" : "line-clamp-4",
-        )}
-      >
-        {overview}
+      <p id={id} className="text-muted-foreground text-sm">
+        {/* Inner wrapper: line-clamp on <p> can hide nested <a> in WebKit-style ellipsis. */}
+        <span
+          className={cn(
+            expanded ? "leading-relaxed" : "line-clamp-4",
+            "[&_a]:underline [&_a]:decoration-primary/45",
+          )}
+        >
+          <OverviewInlineLinks text={overview} />
+        </span>
       </p>
       <div className="flex flex-wrap items-center gap-2">
         <Button
