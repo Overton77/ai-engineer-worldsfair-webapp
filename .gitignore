@@ -57,3 +57,5 @@ yarn-error.log*
 .env*.local
 # next-agents-md
 .next-docs/
+/test-results/
+/playwright-report/

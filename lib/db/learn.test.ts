@@ -278,7 +278,7 @@ function buildClient(state: State) {
     let upsertConflict: string[] = [];
     let updateRow: Record<string, unknown> | null = null;
 
-    const rows = () => state[table as keyof State] as RowFor<T>[];
+    const rows = () => (state[table as keyof State] ?? []) as RowFor<T>[];
     const matches = (row: Record<string, unknown>) =>
       call.filters.every(([col, op, value]) => {
         if (op === "eq") return row[col] === value;
@@ -351,6 +351,7 @@ function buildClient(state: State) {
         updateRow = row;
         return api;
       },
+      returns: () => resolve(),
       maybeSingle: () =>
         resolve().then(({ data, error }) => ({
           data: Array.isArray(data) ? data[0] ?? null : data,

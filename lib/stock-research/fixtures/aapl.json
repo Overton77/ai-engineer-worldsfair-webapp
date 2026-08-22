@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "1.0",
+  "ticker": "AAPL",
+  "asOf": "2024-11-01T23:59:59.000Z",
+  "thesis": [{"claim":"Apple reported year-over-year annual revenue growth.","evidenceIndexes":[0]}],
+  "counterThesis": [{"claim":"Greater China annual net sales declined year over year.","evidenceIndexes":[1]}],
+  "uncertainties": [{"claim":"Future product demand and regional performance remain uncertain.","evidenceIndexes":[0,1]}],
+  "evidence": [
+    {"sourceUrl":"https://www.apple.com/newsroom/2024/10/apple-reports-fourth-quarter-results/","publisher":"Apple Newsroom","retrievedAt":"2025-01-15T12:00:00.000Z","publishedAt":"2024-10-31T20:30:00.000Z","excerpt":"The Company posted quarterly revenue of $94.9 billion, up 6 percent year over year.","structuredFact":{"quarterlyRevenueUsdBillions":94.9,"yearOverYearGrowthPercent":6}},
+    {"sourceUrl":"https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm","publisher":"U.S. Securities and Exchange Commission","retrievedAt":"2025-01-15T12:05:00.000Z","publishedAt":"2024-11-01T10:00:00.000Z","excerpt":"Greater China net sales were $66,952 million in 2024 and $72,559 million in 2023.","structuredFact":{"2024NetSalesUsdMillions":66952,"2023NetSalesUsdMillions":72559}}
+  ],
+  "paperTrade":{"action":"hold","notionalUsd":1000,"rationale":"Use a fixed synthetic notional while weighing revenue growth against regional weakness.","simulationOnly":true},
+  "disclaimer":"Educational paper-trading simulation only; not personalized investment advice."
+}

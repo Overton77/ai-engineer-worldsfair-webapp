@@ -41,7 +41,9 @@
     "research:starter-transcripts:status": "pnpm exec tsx scripts/research-starter-transcripts/ingest.ts --status",
     "vault:upsert-modules:agent-orchestration": "pnpm exec tsx scripts/upsert-modules.ts --bucket agent_orchestration",
     "vault:upsert-courses:agent-orchestration": "pnpm exec tsx scripts/upsert-courses.ts --bucket agent_orchestration",
-    "vault:upsert:agent-orchestration-skills-mini": "pnpm run vault:upsert-modules:agent-orchestration && pnpm run vault:upsert-courses:agent-orchestration"
+    "vault:upsert:agent-orchestration-skills-mini": "pnpm run vault:upsert-modules:agent-orchestration && pnpm run vault:upsert-courses:agent-orchestration",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.50",
@@ -106,7 +108,8 @@
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.4",
+    "@playwright/test": "^1.52.0"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
