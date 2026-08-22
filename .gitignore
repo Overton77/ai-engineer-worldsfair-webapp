@@ -47,6 +47,10 @@ yarn-error.log*
 !scripts/research-ingestion-workflow.example.json
 !scripts/research-ingestion-workflow/
 !scripts/research-ingestion-workflow/**
+!scripts/ingest-research-starter-videos.ts
+!scripts/fetch-youtube-transcript.py
+
+.cache/
 
 **/personal_archives/** 
 .vercel
